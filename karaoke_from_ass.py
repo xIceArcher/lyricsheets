@@ -19,7 +19,10 @@ def read_karaoke(filePath: str):
         song = []
 
         for event in events:
-            matches = re.findall(r'\{\\[kK]([0-9]+)\}([^\{]+)', event.text)
+            matches = re.findall(r'\{\\[kK][f]?([0-9]+)[^0-9]*\}([^\{]+)', event.text)
+            if len(matches) == 0:
+                continue
+
             syllables = [{'len': int(time), 'text': text} for time, text in matches]
             kTimeSumMicro = sum([int(time) for time, _ in matches]) * 10 * 1000
 
