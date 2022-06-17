@@ -59,15 +59,11 @@ def main():
         }
     }
 
-    with open(CONFIG_PATH) as f:
-        config = json.load(f)
-        spreadsheetId = config['spreadsheet_id']
-
-        create_new_song_sheet(spreadsheetId, song)
-        print_title(spreadsheetId, args.title, song)
-        print_line_times(spreadsheetId, args.title, song)
-        print_line_karaoke(spreadsheetId, args.title, song)
-        print_romaji(spreadsheetId, args.title, song)
+    create_new_song_sheet(spreadsheetId, song)
+    print_title(spreadsheetId, args.title, song)
+    print_line_times(spreadsheetId, args.title, song)
+    print_line_karaoke(spreadsheetId, args.title, song)
+    print_romaji(spreadsheetId, args.title, song)
 
 if __name__ == '__main__':
     main()

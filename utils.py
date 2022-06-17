@@ -9,8 +9,11 @@ def get_row_idx(cellRef: str) -> int:
     return get_row(cellRef) - 1
 
 def get_column(cellRef: str) -> str:
-    row = str(get_row(cellRef))
-    return cellRef[:len(cellRef)-len(row)]
+    row = get_row(cellRef)
+    if row is None:
+        return cellRef
+
+    return cellRef[:len(cellRef)-len(str(row))]
 
 def get_column_idx(cellRef: str) -> int:
     col = get_column(cellRef)
@@ -20,3 +23,10 @@ def get_column_idx(cellRef: str) -> int:
         ret += cVal * (26 ** i)
 
     return ret
+
+def color_to_hex(color) -> str:
+    r = round(color['red'] * 255) if 'red' in color else 0
+    g = round(color['green'] * 255) if 'green' in color else 0
+    b = round(color['blue'] * 255) if 'blue' in color else 0
+
+    return f'{r:02x}{g:02x}{b:02x}'

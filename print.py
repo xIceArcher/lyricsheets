@@ -1,35 +1,10 @@
-import os
 import functools
-import json
 import operator
 
-from utils import *
-
-from apiclient import discovery
-from google.oauth2 import service_account
-
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-CONFIG_PATH = os.path.join(os.getcwd(), 'config.json')
-TEMPLATE_SHEET_NAME = 'Template'
-
-service = None
-
-with open(CONFIG_PATH) as f:
-    config = json.load(f)
-    service = discovery.build('sheets', 'v4', credentials=service_account.Credentials.from_service_account_info(config['google_credentials'], scopes=SCOPES)).spreadsheets()
-
-def get_sheets(spreadsheetId):
-    resp = service.get(spreadsheetId=spreadsheetId,fields='sheets.properties').execute()
-    return {sheet['properties']['title']: sheet['properties']['sheetId'] for sheet in resp['sheets']}
-
-def get_format_map(spreadsheetId, rootPos='J1'):
-    row = get_row(rootPos)
-
-    resp = service.get(spreadsheetId=spreadsheetId,ranges=f'{TEMPLATE_SHEET_NAME}!{rootPos}:{row}',fields='sheets.data.rowData.values(userEnteredValue,userEnteredFormat(backgroundColor,textFormat.foregroundColor))').execute()
-    return {value['userEnteredValue']['numberValue']: value['userEnteredFormat'] for value in resp['sheets'][0]['data'][0]['rowData'][0]['values'] if 'userEnteredFormat' in value and 'userEnteredValue' in value}
+from sheets import *
 
 def create_new_song_sheet(spreadsheetId, song):
-    allSheets = get_sheets(spreadsheetId)
+    allSheets = get_sheets_properties(spreadsheetId)
     duplicateSheetReq = {
         'duplicateSheet': {
             'sourceSheetId': allSheets[TEMPLATE_SHEET_NAME],
@@ -99,7 +74,7 @@ def print_line_karaoke(spreadsheetId, sheetName, song, rootPos='I6'):
     return service.values().append(spreadsheetId=spreadsheetId, range=f'{sheetName}!{rootPos}', body=body, valueInputOption='RAW').execute()
 
 def color_syllables(spreadsheetId, sheetName, song, rootPos='I6'):
-    sheetId = get_sheets(spreadsheetId)[sheetName]
+    sheetId = get_sheets_properties(spreadsheetId)[sheetName]
     rowOffset = get_row_idx(rootPos)
     columnOffset = get_column_idx(rootPos)
 
