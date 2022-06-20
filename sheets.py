@@ -22,9 +22,16 @@ def get_sheets_properties(spreadsheetId):
     resp = service.get(spreadsheetId=spreadsheetId,fields='sheets.properties').execute()
     return {sheet['properties']['title']: sheet['properties']['sheetId'] for sheet in resp['sheets']}
 
-def get_format_map(spreadsheetId, rootPos='J1'):
+def get_format_map(spreadsheetId, rootPos='I1'):
     row = get_row(rootPos)
 
     resp = service.get(spreadsheetId=spreadsheetId,ranges=f'{TEMPLATE_SHEET_NAME}!{rootPos}:{row}',fields='sheets.data.rowData.values(userEnteredValue,userEnteredFormat(backgroundColor,textFormat.foregroundColor))').execute()
     return {value['userEnteredValue']['numberValue']: value['userEnteredFormat'] for value in resp['sheets'][0]['data'][0]['rowData'][0]['values'] if 'userEnteredFormat' in value and 'userEnteredValue' in value}
 
+def get_format_string_map(spreadsheetId, rootPos='I1'):
+    row = get_row(rootPos)
+
+    resp = service.get(spreadsheetId=spreadsheetId,ranges=f'{TEMPLATE_SHEET_NAME}!{rootPos}:{row}',fields='sheets.data.rowData.values.userEnteredValue').execute()
+    respIter = iter(resp['sheets'][0]['data'][0]['rowData'][0]['values'])
+
+    return {formatKey['userEnteredValue']['numberValue']: formatStr['userEnteredValue']['stringValue'] for formatStr, formatKey in zip(respIter, respIter) if 'userEnteredValue' in formatStr and 'userEnteredValue' in formatKey}

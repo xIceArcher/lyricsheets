@@ -119,3 +119,15 @@ def print_romaji(spreadsheetId, sheetName, song, rootPos='E6'):
     }
 
     return service.values().append(spreadsheetId=spreadsheetId, range=f'{sheetName}!{rootPos}', body=body, valueInputOption='USER_ENTERED').execute()
+
+def print_song(spreadsheetId, songJson):
+    create_new_song_sheet(spreadsheetId, songJson)
+
+    newSheetName = songJson['title']['romaji']
+    print_preamble(spreadsheetId, newSheetName, songJson)
+    print_english(spreadsheetId, newSheetName, songJson)
+    print_is_secondary(spreadsheetId, newSheetName, songJson)
+    print_line_times(spreadsheetId, newSheetName, songJson)
+    print_line_karaoke(spreadsheetId, newSheetName, songJson)
+    print_romaji(spreadsheetId, newSheetName, songJson)
+    color_syllables(spreadsheetId, newSheetName, songJson)

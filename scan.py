@@ -2,12 +2,12 @@ import argparse
 
 from sheets import *
 
-def get_title(spreadsheetId, sheetName, range='A1:A2'):
+def scan_title(spreadsheetId, sheetName, range='A1:A2'):
     result = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{range}').execute()['values']
 
     ret = {
         'title': {
-            'romaji': result[0][0],           
+            'romaji': result[0][0],
         }
     }
 
@@ -16,7 +16,7 @@ def get_title(spreadsheetId, sheetName, range='A1:A2'):
 
     return ret
 
-def get_creators(spreadsheetId, sheetName, range='E1:E4'):
+def scan_creators(spreadsheetId, sheetName, range='E1:E4'):
     result = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{range}').execute()['values']
 
     return {
@@ -26,7 +26,7 @@ def get_creators(spreadsheetId, sheetName, range='E1:E4'):
         'writers': [composer.strip() for composer in result[3][0].split(',')],
     }
 
-def get_lyrics(spreadsheetId, sheetName, rootPos='A6'):
+def scan_lyrics(spreadsheetId, sheetName, rootPos='A6'):
     rootPosRow = get_row(rootPos)
     rootPosCol = get_column(rootPos)
 
@@ -77,12 +77,12 @@ def parse_line(rowData, formatToActorMap):
         'breakpoints': breakpoints,
     }
 
-def get_song_json(spreadsheetId, songName):
+def scan_song(spreadsheetId, songName):
     ret = {}
-    
-    ret.update(get_title(spreadsheetId, songName))
-    ret.update(get_creators(spreadsheetId, songName))
-    ret.update(get_lyrics(spreadsheetId, songName))
+
+    ret.update(scan_title(spreadsheetId, songName))
+    ret.update(scan_creators(spreadsheetId, songName))
+    ret.update(scan_lyrics(spreadsheetId, songName))
 
     return ret
 
@@ -96,8 +96,8 @@ def main():
 
     args = parser.parse_args()
 
-    song = get_song_json(spreadsheetId, args.title)
-    
+    song = scan_song(spreadsheetId, args.title)
+
     with open(args.output_fname, 'w+') as f:
         json.dump(song, f)
 
