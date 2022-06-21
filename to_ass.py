@@ -24,6 +24,20 @@ TITLE_STYLE_NAME = 'Title'
 ROMAJI_STYLE_NAME = 'JP'
 EN_STYLE_NAME = 'EN'
 
+def to_comment(line: ass.line.Dialogue) -> ass.line.Comment:
+    return ass.line.Comment(
+        layer=line.layer,
+        start=line.start,
+        end=line.end,
+        style=line.style,
+        name=line.name,
+        margin_l=line.margin_l,
+        margin_r=line.margin_r,
+        margin_v=line.margin_v,
+        effect=line.effect,
+        text=line.text,
+    )
+
 def get_style_tag(switchTime: int, style: str, switchDuration: int=200) -> str:
     return rf'{{\t({switchTime-switchDuration//2},{switchTime+switchDuration//2},{style})}}' if switchTime != 0 else rf'{{{style}}}'
 
@@ -81,20 +95,17 @@ def get_song_events(spreadsheetId, songName, actorToStyle):
             text=get_romaji_event_text(line, actorToStyle),
         ))
 
+        enLine = ass.line.Dialogue(
+            style=EN_STYLE_NAME,
+            start=start,
+            end=end,
+            text=get_en_event_text(line, actorToStyle),
+        )
+
         if line['romaji'] != line['en']:
-            enEvents.append(ass.line.Dialogue(
-                style=EN_STYLE_NAME,
-                start=start,
-                end=end,
-                text=get_en_event_text(line, actorToStyle),
-            ))
+            enEvents.append(enLine)
         else:
-            enEvents.append(ass.line.Comment(
-                style=EN_STYLE_NAME,
-                start=start,
-                end=end,
-                text=get_en_event_text(line, actorToStyle),
-            ))
+            enEvents.append(to_comment(enLine))
 
     return [
         ass.line.Comment(
