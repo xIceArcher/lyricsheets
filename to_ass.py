@@ -6,6 +6,7 @@ from datetime import timedelta
 from functools import reduce
 
 from scan import *
+from modifier import *
 
 TITLE_CARD_TAG = r'{\fad(200,200)\be11\an7}'
 
@@ -78,9 +79,13 @@ def get_title_event_text(song) -> str:
 
     return s
 
-def get_song_events(spreadsheetId, songName, actorToStyle):
+def get_song_events(spreadsheetId, songName, actorToStyle, shouldPrintTitle, modifiers: list[Modifier]=[]):
     songJson = scan_song(spreadsheetId, songName)
+    songJson = modify_song(songJson, modifiers)
 
+    return get_song_json_events(songJson, actorToStyle, shouldPrintTitle)
+
+def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
     romajiEvents = []
     enEvents = []
 
@@ -107,17 +112,22 @@ def get_song_events(spreadsheetId, songName, actorToStyle):
         else:
             enEvents.append(to_comment(enLine))
 
+    title = ass.line.Dialogue(
+        style=TITLE_STYLE_NAME,
+        text=get_title_event_text(songJson),
+        end=timedelta(seconds=5),
+    )
+
+    if not shouldPrintTitle:
+        title = to_comment(title)
+
     return [
         ass.line.Comment(
             style=DIVIDER_STYLE_NAME,
             text=songJson['title']['romaji'],
             end=romajiEvents[-1].end,
         ),
-        ass.line.Dialogue(
-            style=TITLE_STYLE_NAME,
-            text=get_title_event_text(songJson),
-            end=timedelta(seconds=5),
-        ),
+        title,
         ass.line.Comment(
             style=DIVIDER_STYLE_NAME,
             text='Romaji',
@@ -139,14 +149,17 @@ def main():
     parser.add_argument('title', help='Title of the song')
     parser.add_argument('output_fname', help='Path to output file')
     parser.add_argument('--template', help='Path to template file', default='template.ass')
+    parser.add_argument('--modifiers', help='Modifiers string', default='')
 
     args = parser.parse_args()
 
     actorToStyle = get_format_string_map(spreadsheetId)
 
+    modifiers = parse_modifiers(args.modifiers)
+
     with open(args.template, encoding='utf_8_sig') as templateFile:
         template = ass.parse(templateFile)
-        template.events = get_song_events(spreadsheetId, args.title, actorToStyle)
+        template.events = get_song_events(spreadsheetId, args.title, actorToStyle, modifiers=modifiers)
 
         with open(args.output_fname, 'w+', encoding='utf_8_sig') as outFile:
             template.dump_file(outFile)
