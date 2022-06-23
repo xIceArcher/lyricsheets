@@ -2,7 +2,7 @@ import argparse
 
 from sheets import *
 
-def scan_title(spreadsheetId, sheetName, range='A1:A2'):
+def scan_title(spreadsheetId, sheetName, range='B1:B2'):
     result = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{range}').execute()['values']
 
     ret = {
@@ -30,7 +30,7 @@ def scan_lyrics(spreadsheetId, sheetName, rootPos='A6'):
     rootPosRow = get_row(rootPos)
     rootPosCol = get_column(rootPos)
 
-    enLines = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{rootPos}:{rootPosCol}').execute()['values']
+    enLines = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!B{rootPosRow}:B').execute()['values']
     ranges = [f'{sheetName}!{rootPosCol}{rootPosRow}:{rootPosRow + len(enLines) - 1}']
 
     result = service.get(
@@ -42,7 +42,7 @@ def scan_lyrics(spreadsheetId, sheetName, rootPos='A6'):
     formatToActorMap = {color_to_hex(format['backgroundColor']): actor for actor, format in get_format_map(spreadsheetId).items()}
     return {
         'lyrics': {
-            'detailed': [parse_line(line, formatToActorMap) for line in result['sheets'][0]['data'][0]['rowData'] if 'formattedValue' in line['values'][0]]
+            'detailed': [parse_line(line, formatToActorMap) for line in result['sheets'][0]['data'][0]['rowData'] if 'formattedValue' in line['values'][1]]
         }
     }
 
@@ -67,7 +67,7 @@ def parse_line(rowData, formatToActorMap):
             breakpoints.append(i)
 
     return {
-        'en': values[get_column_idx('A')]['formattedValue'],
+        'en': values[get_column_idx('B')]['formattedValue'],
         'romaji': ''.join([syllable['text'] for syllable in syllables]),
         'secondary': 'formattedValue' in values[get_column_idx('F')],
         'start': values[get_column_idx('G')]['formattedValue'],
