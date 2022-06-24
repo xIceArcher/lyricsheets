@@ -19,7 +19,7 @@ def create_new_song_sheet(spreadsheetId, song):
 
     return service.batchUpdate(spreadsheetId=spreadsheetId, body=body).execute()
 
-def print_title(spreadsheetId, sheetName, song, rootPos='A1'):
+def print_title(spreadsheetId, sheetName, song, rootPos='B1'):
     body = {
         'values': [
             [song['title']['romaji']],
