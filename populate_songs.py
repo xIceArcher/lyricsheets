@@ -73,24 +73,29 @@ def populate_styles(styles: list[ass.Style]):
 
     return styles
 
+def remove_old_song_lines(events):
+    return [event for event in events if event.style == SONG_STYLE_NAME or not event.style.startswith(SONG_STYLE_NAME)]
+
 def main():
     parser = argparse.ArgumentParser(
         description='Populate lyrics in an .ass file'
     )
-    parser.add_argument('input_fname', help='Path to input file')
-    parser.add_argument('output_fname', help='Path to output file')
+    parser.add_argument('fname', help='Path to input file')
     parser.add_argument('--title', help='Whether to print the title', action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
 
-    with open(args.input_fname, encoding='utf_8_sig') as inputFile:
+    inputAss = None
+    with open(args.fname, encoding='utf_8_sig') as inputFile:
         inputAss = ass.parse(inputFile)
 
         inputAss.styles = populate_styles(inputAss.styles)
+
+        inputAss.events = remove_old_song_lines(inputAss.events)
         inputAss.events = populate_songs(spreadsheetId, inputAss.events, args.title)
 
-        with open(args.output_fname, 'w+', encoding='utf_8_sig') as outFile:
-            inputAss.dump_file(outFile)
+    with open(args.fname, 'w+', encoding='utf_8_sig') as outFile:
+        inputAss.dump_file(outFile)
 
 if __name__ == '__main__':
     main()
