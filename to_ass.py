@@ -20,10 +20,114 @@ SECONDARY_ROMAJI_POS_TAG = r'{\pos(960,65)}'
 EN_POS_TAG = r"{\pos(960,1015)}"
 SECONDARY_EN_POS_TAG = r"{\pos(960,120)}"
 
-DIVIDER_STYLE_NAME = '-- DIVIDER --'
-TITLE_STYLE_NAME = 'Title'
-ROMAJI_STYLE_NAME = 'JP'
-EN_STYLE_NAME = 'EN'
+DIVIDER_STYLE_NAME = 'Song - Divider'
+TITLE_STYLE_NAME = 'Song - Title'
+ROMAJI_STYLE_NAME = 'Song - JP'
+EN_STYLE_NAME = 'Song - EN'
+
+DIVIDER_STYLE = ass.Style(
+    name=DIVIDER_STYLE_NAME,
+    fontname='Arial',
+    fontsize=20.0,
+    primary_color=ass.line.Color(r=0xff, g=0xff, b=0xff, a=0x00),
+    secondary_color=ass.line.Color(r=0xff, g=0x00, b=0x00, a=0x00),
+    outline_color=ass.line.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+    back_color=ass.line.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+    bold=True,
+    italic=False,
+    underline=False,
+    strike_out=False,
+    scale_x=100.0,
+    scale_y=100.0,
+    spacing=0.0,
+    angle=0.0,
+    border_style=1,
+    outline=2.0,
+    shadow=2.0,
+    alignment=2,
+    margin_l=9,
+    margin_r=9,
+    margin_v=9,
+    encoding=1,
+)
+
+TITLE_STYLE = ass.Style(
+    name=TITLE_STYLE_NAME,
+    fontname='Museo Sans 900',
+    fontsize=30.0,
+    primary_color=ass.line.Color(r=0xff, g=0xff, b=0xff, a=0x0a),
+    secondary_color=ass.line.Color(r=0x00, g=0x00, b=0x00, a=0xf0),
+    outline_color=ass.line.Color(r=0x00, g=0x00, b=0x00, a=0x0a),
+    back_color=ass.line.Color(r=0xd6, g=0x1e, b=0xa8, a=0x00),
+    bold=False,
+    italic=False,
+    underline=False,
+    strike_out=False,
+    scale_x=100.0,
+    scale_y=100.0,
+    spacing=0.0,
+    angle=0.0,
+    border_style=1,
+    outline=3.0,
+    shadow=0.0,
+    alignment=1,
+    margin_l=29,
+    margin_r=29,
+    margin_v=29,
+    encoding=1
+)
+
+ROMAJI_STYLE = ass.Style(
+    name=ROMAJI_STYLE_NAME,
+    fontname='Proxima Nova Th',
+    fontsize=58.0,
+    primary_color=ass.line.Color(r=0xff, g=0xff, b=0xff, a=0x00),
+    secondary_color=ass.line.Color(r=0x00, g=0x00, b=0x00, a=0x00),
+    outline_color=ass.line.Color(r=0xa5, g=0x46, b=0x9b, a=0x00),
+    back_color=ass.line.Color(r=0x72, g=0x30, b=0x6b, a=0x00),
+    bold=True,
+    italic=False,
+    underline=False,
+    strike_out=False,
+    scale_x=100.0,
+    scale_y=100.0,
+    spacing=0.0,
+    angle=0.0,
+    border_style=1,
+    outline=1.5,
+    shadow=1.0,
+    alignment=2,
+    margin_l=246,
+    margin_r=246,
+    margin_v=45,
+    encoding=1
+)
+
+EN_STYLE = ass.Style(
+    name=EN_STYLE_NAME,
+    fontname='Avenir Next Rounded Pro',
+    fontsize=40.0,
+    primary_color=ass.line.Color(r=0xff, g=0xff, b=0xff, a=0x00),
+    secondary_color=ass.line.Color(r=0xff, g=0x00, b=0x00, a=0x00),
+    outline_color=ass.line.Color(r=0xa5, g=0x46, b=0x9b, a=0x00),
+    back_color=ass.line.Color(r=0x72, g=0x30, b=0x6b, a=0x00),
+    bold=True,
+    italic=False,
+    underline=False,
+    strike_out=False,
+    scale_x=100.0,
+    scale_y=100.0,
+    spacing=0.0,
+    angle=0.0,
+    border_style=1,
+    outline=1.5,
+    shadow=1.0,
+    alignment=2,
+    margin_l=113,
+    margin_r=113,
+    margin_v=45,
+    encoding=1
+)
 
 def to_comment(line: ass.line.Dialogue) -> ass.line.Comment:
     return ass.line.Comment(

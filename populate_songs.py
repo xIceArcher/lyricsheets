@@ -4,7 +4,7 @@ import re
 import string
 
 from sheets import *
-from to_ass import get_song_events, to_comment
+from to_ass import *
 from modifier import *
 
 SONG_STYLE_NAME = 'Song'
@@ -58,6 +58,21 @@ def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
 
     return outEvents
 
+def populate_styles(styles: list[ass.Style]):
+    requiredStyles = {
+        DIVIDER_STYLE_NAME: DIVIDER_STYLE,
+        TITLE_STYLE_NAME: TITLE_STYLE,
+        ROMAJI_STYLE_NAME: ROMAJI_STYLE,
+        EN_STYLE_NAME: EN_STYLE,
+    }
+
+    currStyles = {style.name: style for style in styles}
+    for requiredStyleName, requiredStyle in requiredStyles.items():
+        if requiredStyleName not in currStyles:
+            styles.append(requiredStyle)
+
+    return styles
+
 def main():
     parser = argparse.ArgumentParser(
         description='Populate lyrics in an .ass file'
@@ -70,6 +85,8 @@ def main():
 
     with open(args.input_fname, encoding='utf_8_sig') as inputFile:
         inputAss = ass.parse(inputFile)
+
+        inputAss.styles = populate_styles(inputAss.styles)
         inputAss.events = populate_songs(spreadsheetId, inputAss.events, args.title)
 
         with open(args.output_fname, 'w+', encoding='utf_8_sig') as outFile:
