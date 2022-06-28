@@ -45,7 +45,7 @@ def print_preamble(spreadsheetId, sheetName, song):
     print_title(spreadsheetId, sheetName, song)
     print_creators(spreadsheetId, sheetName, song)
 
-def print_english(spreadsheetId, sheetName, song, rootPos='A6'):
+def print_english(spreadsheetId, sheetName, song, rootPos='B6'):
     body = {
         'values': [[line['en']] for line in song['lyrics']['detailed']]
     }
@@ -54,7 +54,7 @@ def print_english(spreadsheetId, sheetName, song, rootPos='A6'):
 
 def print_is_secondary(spreadsheetId, sheetName, song, rootPos='F6'):
     body = {
-        'values': [['U' if line['secondary'] else '' for line in song['lyrics']['detailed']]]
+        'values': [['U'] if line['secondary'] else [] for line in song['lyrics']['detailed']]
     }
 
     return service.values().append(spreadsheetId=spreadsheetId, range=f'{sheetName}!{rootPos}', body=body, valueInputOption='RAW').execute()
