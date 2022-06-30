@@ -50,6 +50,11 @@ class LineModifier:
         self.breakpoints = None
         self.actors = None
 
+        self.shouldOverwriteKaraoke = False
+        self.start = timedelta(0)
+        self.end = timedelta(0)
+        self.syllableLengths = []
+
 def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModifier]:
     ret = [LineModifier() for _ in range(maxLines)]
 
@@ -87,6 +92,11 @@ def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModif
                     ret[i].shouldOverwriteStyle = True
                     ret[i].breakpoints = breakpoints
                     ret[i].actors = actors
+        elif modifier.operation == 'karaoke':
+            ret[modifier.start].shouldOverwriteKaraoke = True
+            ret[modifier.start].start = timedelta(seconds=pytimeparse.parse(modifier.rest[0]))
+            ret[modifier.start].end = timedelta(seconds=pytimeparse.parse(modifier.rest[1]))
+            ret[modifier.start].syllableLengths = modifier.rest[2:]
 
     return ret
 
@@ -102,8 +112,14 @@ def modify_song(songJson, modifiers: list[Modifier]):
         if modifier.shouldForceSecondary:
             line['secondary'] = True
 
-        line['start'] = str(timedelta(seconds=pytimeparse.parse(line['start'])) + modifier.offset)
-        line['end'] = str(timedelta(seconds=pytimeparse.parse(line['end'])) + modifier.offset)
+        if modifier.shouldOverwriteKaraoke:
+            line['start'] = str(modifier.start + modifier.offset)
+            line['end'] = str(modifier.end + modifier.offset)
+            for syllable, newTime in zip(line['syllables'], modifier.syllableLengths):
+                syllable['len'] = int(newTime)
+        else:
+            line['start'] = str(timedelta(seconds=pytimeparse.parse(line['start'])) + modifier.offset)
+            line['end'] = str(timedelta(seconds=pytimeparse.parse(line['end'])) + modifier.offset)
 
         if modifier.shouldOverwriteStyle:
             line['breakpoints'] = modifier.breakpoints
