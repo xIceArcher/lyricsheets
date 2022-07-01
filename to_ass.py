@@ -20,6 +20,8 @@ SECONDARY_ROMAJI_POS_TAG = r'{\pos(960,65)}'
 EN_POS_TAG = r"{\pos(960,1015)}"
 SECONDARY_EN_POS_TAG = r"{\pos(960,120)}"
 
+K_IFX_TAG = r'\-'
+
 DIVIDER_STYLE_NAME = 'Song - Divider'
 TITLE_STYLE_NAME = 'Song - Title'
 ROMAJI_STYLE_NAME = 'Song - JP'
@@ -159,7 +161,7 @@ def get_romaji_event_text(line, actorToStyle, withK=True, switchDuration: int=20
         # Make sure the syllable finishes before the line starts fading
         line['syllables'][-1]['len'] = max(line['syllables'][-1]['len'] - switchDuration // 10, 10)
 
-        s += ''.join([rf"{{\kf{syllable['len']}}}{syllable['text']}" for syllable in line['syllables']])
+        s += ''.join([rf"{{\kf{syllable['len']}{K_IFX_TAG + str(syllable['ifx']) if 'ifx' in syllable else ''}}}{syllable['text']}" for syllable in line['syllables']])
 
     if line['secondary']:
         return SECONDARY_LYRICS_TAG + SECONDARY_ROMAJI_POS_TAG + s
