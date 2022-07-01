@@ -65,9 +65,10 @@ def parse_line(rowData, formatToActorMap):
         if not actors or currActor != actors[-1]:
             actors.append(currActor)
             breakpoints.append(i)
-
-    return {
+    
+    parsed_line = {
         'en': values[get_column_idx('B')]['formattedValue'],
+        'karaoke': values[get_column_idx('D')].get('formattedValue'),
         'romaji': ''.join([syllable['text'] for syllable in syllables]),
         'secondary': 'formattedValue' in values[get_column_idx('F')],
         'start': values[get_column_idx('G')]['formattedValue'],
@@ -76,6 +77,11 @@ def parse_line(rowData, formatToActorMap):
         'actors': actors,
         'breakpoints': breakpoints,
     }
+
+    if 'formattedValue' in values[get_column_idx('D')]:
+        parsed_line['karaoke'] = values[get_column_idx('D')]['formattedValue']
+
+    return parsed_line
 
 def scan_song(spreadsheetId, songName):
     ret = {}
