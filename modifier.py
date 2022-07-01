@@ -37,6 +37,9 @@ def parse_modifier(s: str) -> Modifier:
     return m
 
 def parse_modifiers(s: str) -> list[Modifier]:
+    if s == '':
+        return []
+
     return [parse_modifier(match) for match in s.split(';')]
 
 class LineModifier:

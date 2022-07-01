@@ -263,7 +263,7 @@ def main():
 
     with open(args.template, encoding='utf_8_sig') as templateFile:
         template = ass.parse(templateFile)
-        template.events = get_song_events(spreadsheetId, args.title, actorToStyle, modifiers=modifiers)
+        template.events = get_song_events(spreadsheetId, args.title, actorToStyle, shouldPrintTitle=True, modifiers=modifiers)
 
         with open(args.output_fname, 'w+', encoding='utf_8_sig') as outFile:
             template.dump_file(outFile)
