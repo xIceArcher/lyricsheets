@@ -199,7 +199,7 @@ def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
 
         if (line['karaoke']):
             romajiEvent = (ass.line.Comment(
-                style=f"{songJson['title']['romaji']} - {line['karaoke']}",
+                style=f"Song - {songJson['title']['romaji']} {line['karaoke']}",
                 start=start,
                 end=end,
                 text=get_romaji_event_text(line, actorToStyle),
