@@ -56,15 +56,18 @@ def parse_line(rowData, formatToActorMap):
 
     timeAndSyllablesIter = iter(timeAndSyllables)
     for i, (val1, val2) in enumerate(zip(timeAndSyllablesIter, timeAndSyllablesIter)):
-        syllables.append({
+        syllable = {
             'len': int(val1['formattedValue']),
             'text': val2['formattedValue']
-        })
-
+        }
+        
         currActor = formatToActorMap[color_to_hex(val2['effectiveFormat']['backgroundColor'])]
         if not actors or currActor != actors[-1]:
             actors.append(currActor)
             breakpoints.append(i)
+            syllable['ifx'] = currActor
+        
+        syllables.append(syllable)
     
     parsed_line = {
         'en': values[get_column_idx('B')]['formattedValue'],
