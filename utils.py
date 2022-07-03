@@ -30,3 +30,6 @@ def color_to_hex(color) -> str:
     b = round(color['blue'] * 255) if 'blue' in color else 0
 
     return f'{r:02x}{g:02x}{b:02x}'
+
+def is_white(color) -> bool:
+    return 'red' in color and color['red'] == 1 and 'blue' in color and  color['green'] == 1 and 'blue' in color and color['blue'] == 1
