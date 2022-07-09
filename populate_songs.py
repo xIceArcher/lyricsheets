@@ -50,6 +50,9 @@ def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
                     event.start += songOffset
                     event.end += songOffset
 
+                    event.start = max(timedelta(0), event.start)
+                    event.end = max(timedelta(0), event.end)
+
                 outEvents.extend(songEvents)
             else:
                 print(f'Could not find song {inEvent.text}')
