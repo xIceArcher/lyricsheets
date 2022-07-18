@@ -81,9 +81,6 @@ def parse_line(rowData, formatToActorMap):
         'breakpoints': breakpoints,
     }
 
-    if 'formattedValue' in values[get_column_idx('D')]:
-        parsed_line['karaoke'] = values[get_column_idx('D')]['formattedValue']
-
     return parsed_line
 
 def scan_song(spreadsheetId, songName):
