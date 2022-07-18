@@ -2,6 +2,7 @@ import argparse
 import ass
 import re
 import string
+import subprocess
 
 from sheets import *
 from to_ass import *
@@ -99,6 +100,11 @@ def main():
 
     with open(args.fname, 'w+', encoding='utf_8_sig') as outFile:
         inputAss.dump_file(outFile)
+    
+    try:
+        subprocess.run(['aegisub-cli', '--automation', 'kara-templater.lua', args.fname, args.fname, 'Apply karaoke template'])
+    except FileNotFoundError:
+        pass
 
 if __name__ == '__main__':
     main()
