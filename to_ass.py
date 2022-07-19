@@ -200,20 +200,20 @@ def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
         end =  timedelta(seconds=pytimeparse.parse(line['end']))
 
         if (line['karaoke']):
-            romajiEvent = (ass.line.Comment(
+            romajiEvent = ass.line.Comment(
                 style=f"Song - {songJson['title']['romaji']} {line['karaoke']}",
                 start=start,
                 end=end,
                 text=get_romaji_event_text(line, actorToStyle),
                 effect='karaoke'
-            ))
+            )
         else:
-            romajiEvent = (ass.line.Dialogue(
+            romajiEvent = ass.line.Dialogue(
                 style=ROMAJI_STYLE_NAME,
                 start=start,
                 end=end,
                 text=get_romaji_event_text(line, actorToStyle),
-            ))
+            )
 
         romajiEvents.append(romajiEvent)
 
