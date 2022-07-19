@@ -2,6 +2,7 @@ import argparse
 import ass
 import re
 import string
+import subprocess
 
 from sheets import *
 from to_ass import *
@@ -11,6 +12,8 @@ SONG_STYLE_NAME = 'Song'
 
 TAGS_REGEX = r'\{[^\}]+\}'
 LYRICS_MODIFIER_TAG_REGEX = r'\{\\lyricsmodify\(([^\)]+)\)}'
+
+TEMPLATE = 'template'
 
 def normalize_song_name(songName: str):
     asciiSongName = songName.encode('ascii', 'ignore').decode().lower()
@@ -77,7 +80,7 @@ def populate_styles(styles: list[ass.Style]):
     return styles
 
 def remove_old_song_lines(events):
-    return [event for event in events if event.style == SONG_STYLE_NAME or not event.style.startswith(SONG_STYLE_NAME)]
+    return [event for event in events if event.style == SONG_STYLE_NAME or not event.style.startswith(SONG_STYLE_NAME) or TEMPLATE in event.effect]
 
 def main():
     parser = argparse.ArgumentParser(
@@ -99,6 +102,11 @@ def main():
 
     with open(args.fname, 'w+', encoding='utf_8_sig') as outFile:
         inputAss.dump_file(outFile)
+    
+    try:
+        subprocess.run(['aegisub-cli', '--automation', 'kara-templater.lua', args.fname, args.fname, 'Apply karaoke template'])
+    except FileNotFoundError:
+        pass
 
 if __name__ == '__main__':
     main()

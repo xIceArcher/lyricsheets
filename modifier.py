@@ -58,6 +58,8 @@ class LineModifier:
         self.end = timedelta(0)
         self.syllableLengths = []
 
+        self.shouldRunKaraTemplater = False
+
 def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModifier]:
     ret = [LineModifier() for _ in range(maxLines)]
 
@@ -100,12 +102,15 @@ def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModif
             ret[modifier.start].start = timedelta(seconds=pytimeparse.parse(modifier.rest[0]))
             ret[modifier.start].end = timedelta(seconds=pytimeparse.parse(modifier.rest[1]))
             ret[modifier.start].syllableLengths = modifier.rest[2:]
+        elif modifier.operation == 'templater':
+            ret[0].shouldRunKaraTemplater = True
+        
 
     return ret
 
 def modify_song(songJson, modifiers: list[Modifier]):
     lineModifiers = to_line_modifiers(modifiers, maxLines=len(songJson['lyrics']['detailed']))
-
+    shouldRunKaraTemplater = False
     outDetailedLyrics = []
 
     for line, modifier in zip(songJson['lyrics']['detailed'], lineModifiers):
@@ -128,7 +133,11 @@ def modify_song(songJson, modifiers: list[Modifier]):
             line['breakpoints'] = modifier.breakpoints
             line['actors'] = modifier.actors
 
+        if modifier.shouldRunKaraTemplater:
+            shouldRunKaraTemplater = True
+
         outDetailedLyrics.append(line)
 
     songJson['lyrics']['detailed'] = outDetailedLyrics
+    songJson['templater'] = shouldRunKaraTemplater
     return songJson

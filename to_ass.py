@@ -20,6 +20,8 @@ SECONDARY_ROMAJI_POS_TAG = r'{\pos(960,65)}'
 EN_POS_TAG = r"{\pos(960,1015)}"
 SECONDARY_EN_POS_TAG = r"{\pos(960,120)}"
 
+K_IFX_TAG = r'\-'
+
 DIVIDER_STYLE_NAME = 'Song - Divider'
 TITLE_STYLE_NAME = 'Song - Title'
 ROMAJI_STYLE_NAME = 'Song - JP'
@@ -159,7 +161,7 @@ def get_romaji_event_text(line, actorToStyle, withK=True, switchDuration: int=20
         # Make sure the syllable finishes before the line starts fading
         line['syllables'][-1]['len'] = max(line['syllables'][-1]['len'] - switchDuration // 10, 10)
 
-        s += ''.join([rf"{{\kf{syllable['len']}}}{syllable['text']}" for syllable in line['syllables']])
+        s += ''.join([rf"{{\kf{syllable['len']}{K_IFX_TAG + str(syllable['ifx']) if 'ifx' in syllable else ''}}}{syllable['text']}" for syllable in line['syllables']])
 
     if line['secondary']:
         return SECONDARY_LYRICS_TAG + SECONDARY_ROMAJI_POS_TAG + s
@@ -197,12 +199,23 @@ def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
         start = timedelta(seconds=pytimeparse.parse(line['start']))
         end =  timedelta(seconds=pytimeparse.parse(line['end']))
 
-        romajiEvents.append(ass.line.Dialogue(
-            style=ROMAJI_STYLE_NAME,
-            start=start,
-            end=end,
-            text=get_romaji_event_text(line, actorToStyle),
-        ))
+        if (line['karaoke']):
+            romajiEvent = ass.line.Comment(
+                style=f"Song - {songJson['title']['romaji']} {line['karaoke']}",
+                start=start,
+                end=end,
+                text=get_romaji_event_text(line, actorToStyle),
+                effect='karaoke'
+            )
+        else:
+            romajiEvent = ass.line.Dialogue(
+                style=ROMAJI_STYLE_NAME,
+                start=start,
+                end=end,
+                text=get_romaji_event_text(line, actorToStyle),
+            )
+
+        romajiEvents.append(romajiEvent)
 
         enLine = ass.line.Dialogue(
             style=EN_STYLE_NAME,
