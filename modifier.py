@@ -79,7 +79,7 @@ def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModif
         elif modifier.operation == 'style':
             if len(modifier.rest) == 1 and not ':' in modifier.rest[0]:
                 # Simple case, entire line is the same actor
-                actor = int(modifier.rest[0])
+                actor = modifier.rest[0]
                 for i in range(modifier.start, modifier.end if modifier.end is not None else maxLines):
                     ret[i].shouldOverwriteStyle = True
                     ret[i].breakpoints = [0]
@@ -91,7 +91,7 @@ def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModif
                 for breakpointToActorStr in modifier.rest:
                     breakpoint, actor = breakpointToActorStr.split(':')
                     breakpoints.append(int(breakpoint) - 1)
-                    actors.append(int(actor))
+                    actors.append(actor)
 
                 for i in range(modifier.start, modifier.end if modifier.end is not None else maxLines):
                     ret[i].shouldOverwriteStyle = True
@@ -104,7 +104,7 @@ def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModif
             ret[modifier.start].syllableLengths = modifier.rest[2:]
         elif modifier.operation == 'templater':
             ret[0].shouldRunKaraTemplater = True
-        
+
 
     return ret
 
