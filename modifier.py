@@ -108,7 +108,7 @@ def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModif
         elif modifier.operation == 'trim':
             trimStr = modifier.rest[0]
             trim = timedelta(seconds=pytimeparse.parse(trimStr))
-
+            
             for i in range(modifier.start, modifier.end if modifier.end is not None else maxLines):
                 ret[i].trim += trim
 
@@ -135,6 +135,7 @@ def modify_song(songJson, modifiers: list[Modifier]):
         else:
             line['start'] = str(timedelta(seconds=pytimeparse.parse(line['start'])) + modifier.offset)
             line['end'] = str(timedelta(seconds=pytimeparse.parse(line['end'])) + modifier.offset - modifier.trim)
+            line['syllables'][-1]['len'] -= int(modifier.trim.microseconds / 10000)
 
         if modifier.shouldOverwriteStyle:
             line['breakpoints'] = modifier.breakpoints
