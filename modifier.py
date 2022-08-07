@@ -48,6 +48,7 @@ class LineModifier:
         self.shouldDiscard = False
 
         self.offset = timedelta(0)
+        self.trim = timedelta(0)
 
         self.shouldOverwriteStyle = False
         self.breakpoints = None
@@ -104,6 +105,12 @@ def to_line_modifiers(modifiers: list[Modifier], maxLines=100) -> list[LineModif
             ret[modifier.start].syllableLengths = modifier.rest[2:]
         elif modifier.operation == 'templater':
             ret[0].shouldRunKaraTemplater = True
+        elif modifier.operation == 'trim':
+            trimStr = modifier.rest[0]
+            trim = timedelta(seconds=pytimeparse.parse(trimStr))
+
+            for i in range(modifier.start, modifier.end if modifier.end is not None else maxLines):
+                ret[i].trim += trim
 
 
     return ret
@@ -127,7 +134,7 @@ def modify_song(songJson, modifiers: list[Modifier]):
                 syllable['len'] = int(newTime)
         else:
             line['start'] = str(timedelta(seconds=pytimeparse.parse(line['start'])) + modifier.offset)
-            line['end'] = str(timedelta(seconds=pytimeparse.parse(line['end'])) + modifier.offset)
+            line['end'] = str(timedelta(seconds=pytimeparse.parse(line['end'])) + modifier.offset - modifier.trim)
 
         if modifier.shouldOverwriteStyle:
             line['breakpoints'] = modifier.breakpoints
