@@ -2,6 +2,9 @@ import argparse
 
 from sheets import *
 
+SECONDARY_SHEET_MODIFIER = 'K'
+DIALOGUE_SHEET_MODIFIER = 'D' 
+
 def scan_title(spreadsheetId, sheetName, range='B1:B2'):
     result = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{range}').execute()['values']
 
@@ -68,12 +71,14 @@ def parse_line(rowData, formatToActorMap):
             syllable['ifx'] = currActor
         
         syllables.append(syllable)
-    
+        sheetModifiers = values[get_column_idx('F')]['formattedValue'] if 'formattedValue' in values[get_column_idx('F')] else ''
+
     parsed_line = {
         'en': values[get_column_idx('B')]['formattedValue'],
         'karaoke': values[get_column_idx('D')].get('formattedValue'),
         'romaji': ''.join([syllable['text'] for syllable in syllables]),
-        'secondary': 'formattedValue' in values[get_column_idx('F')],
+        'secondary': SECONDARY_SHEET_MODIFIER in sheetModifiers,
+        'dialogue': DIALOGUE_SHEET_MODIFIER in sheetModifiers,
         'start': values[get_column_idx('G')]['formattedValue'],
         'end': values[get_column_idx('H')]['formattedValue'],
         'syllables': syllables,
