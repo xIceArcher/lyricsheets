@@ -2,7 +2,7 @@ import argparse
 
 from sheets import *
 
-SECONDARY_SHEET_MODIFIER = 'K'
+SECONDARY_SHEET_MODIFIER = 'U'
 DIALOGUE_SHEET_MODIFIER = 'D' 
 
 def scan_title(spreadsheetId, sheetName, range='B1:B2'):
