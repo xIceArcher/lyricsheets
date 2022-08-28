@@ -3,6 +3,7 @@ import ass
 import re
 import string
 import subprocess
+import time
 
 from sheets import *
 from to_ass import *
@@ -27,8 +28,10 @@ def get_full_song_name(spreadsheetId, inSongName: str):
         if normalize_song_name(songName) == searchKey:
             return songName
 
-def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
+def populate_songs(spreadsheetId, inEvents, shouldPrintTitle, shouldDelay):
     outEvents = []
+
+    hasStarted = False
 
     for inEvent in inEvents:
         if inEvent.style == SONG_STYLE_NAME:
@@ -41,6 +44,12 @@ def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
             songName = re.sub(TAGS_REGEX, '', inEvent.text)
             actualSongName = get_full_song_name(spreadsheetId, songName)
             if actualSongName is not None:
+                if not hasStarted:
+                    hasStarted = True
+                else:
+                    if shouldDelay:
+                        time.sleep(7)
+
                 print(f'Populating {actualSongName}')
 
                 actorToStyle = get_format_string_map(spreadsheetId)
@@ -88,6 +97,7 @@ def main():
     )
     parser.add_argument('fname', help='Path to input file')
     parser.add_argument('--title', help='Whether to print the title', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--delay', help='Whether to add a delay when populating songs', action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
 
@@ -98,7 +108,7 @@ def main():
         inputAss.styles = populate_styles(inputAss.styles)
 
         inputAss.events = remove_old_song_lines(inputAss.events)
-        inputAss.events = populate_songs(spreadsheetId, inputAss.events, args.title)
+        inputAss.events = populate_songs(spreadsheetId, inputAss.events, args.title, args.delay)
 
     with open(args.fname, 'w+', encoding='utf_8_sig') as outFile:
         inputAss.dump_file(outFile)
