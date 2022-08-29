@@ -28,11 +28,10 @@ def get_full_song_name(spreadsheetId, inSongName: str):
         if normalize_song_name(songName) == searchKey:
             return songName
 
-def populate_songs(spreadsheetId, inEvents, shouldPrintTitle, shouldDelay):
+def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
     outEvents = []
 
-    hasStarted = False
-
+    songCount = 0
     for inEvent in inEvents:
         if inEvent.style == SONG_STYLE_NAME:
             outEvents.append(to_comment(inEvent))
@@ -44,11 +43,13 @@ def populate_songs(spreadsheetId, inEvents, shouldPrintTitle, shouldDelay):
             songName = re.sub(TAGS_REGEX, '', inEvent.text)
             actualSongName = get_full_song_name(spreadsheetId, songName)
             if actualSongName is not None:
-                if not hasStarted:
-                    hasStarted = True
-                else:
-                    if shouldDelay:
-                        time.sleep(7)
+                
+                songCount += 1
+
+                if songCount % 10 == 0:
+                    print('Pausing to stay within API limits...')
+                    time.sleep(55)
+                    print('Resuming')
 
                 print(f'Populating {actualSongName}')
 
@@ -97,7 +98,6 @@ def main():
     )
     parser.add_argument('fname', help='Path to input file')
     parser.add_argument('--title', help='Whether to print the title', action=argparse.BooleanOptionalAction)
-    parser.add_argument('--delay', help='Whether to add a delay when populating songs', action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
 
@@ -108,7 +108,7 @@ def main():
         inputAss.styles = populate_styles(inputAss.styles)
 
         inputAss.events = remove_old_song_lines(inputAss.events)
-        inputAss.events = populate_songs(spreadsheetId, inputAss.events, args.title, args.delay)
+        inputAss.events = populate_songs(spreadsheetId, inputAss.events, args.title)
 
     with open(args.fname, 'w+', encoding='utf_8_sig') as outFile:
         inputAss.dump_file(outFile)
