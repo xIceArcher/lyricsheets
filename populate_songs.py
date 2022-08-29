@@ -15,6 +15,7 @@ TAGS_REGEX = r'\{[^\}]+\}'
 LYRICS_MODIFIER_TAG_REGEX = r'\{\\lyricsmodify\(([^\)]+)\)}'
 
 TEMPLATE = 'template'
+CODE = 'code'
 
 def normalize_song_name(songName: str):
     asciiSongName = songName.encode('ascii', 'ignore').decode().lower()
@@ -90,7 +91,7 @@ def populate_styles(styles: list[ass.Style]):
     return styles
 
 def remove_old_song_lines(events):
-    return [event for event in events if event.style == SONG_STYLE_NAME or not event.style.startswith(SONG_STYLE_NAME) or TEMPLATE in event.effect]
+    return [event for event in events if event.style == SONG_STYLE_NAME or not event.style.startswith(SONG_STYLE_NAME) or TEMPLATE in event.effect or CODE in event.effect]
 
 def main():
     parser = argparse.ArgumentParser(
