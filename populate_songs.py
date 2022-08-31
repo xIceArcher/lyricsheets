@@ -3,6 +3,7 @@ import ass
 import re
 import string
 import subprocess
+import time
 
 from sheets import *
 from to_ass import *
@@ -31,6 +32,7 @@ def get_full_song_name(spreadsheetId, inSongName: str):
 def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
     outEvents = []
 
+    songCount = 0
     for inEvent in inEvents:
         if inEvent.style == SONG_STYLE_NAME:
             outEvents.append(to_comment(inEvent))
@@ -42,6 +44,14 @@ def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
             songName = re.sub(TAGS_REGEX, '', inEvent.text)
             actualSongName = get_full_song_name(spreadsheetId, songName)
             if actualSongName is not None:
+                
+                songCount += 1
+
+                if songCount % 10 == 0:
+                    print('Pausing to stay within API limits...')
+                    time.sleep(55)
+                    print('Resuming')
+
                 print(f'Populating {actualSongName}')
 
                 actorToStyle = get_format_string_map(spreadsheetId)
