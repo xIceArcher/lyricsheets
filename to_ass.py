@@ -12,6 +12,7 @@ TITLE_CARD_TAG = r'{\fad(200,200)\be11\an7}'
 
 LYRICS_TAG = r'{\fad(200,200)\be11\an5}'
 SECONDARY_LYRICS_TAG = r'{\fad(200,200)\be11\an5}'
+DIALOGUE_TAG = r'{\an5\fnAvenir Next LT Pro\fs60\b1\bord3.0\shad2.0}'
 
 ROMAJI_POS_TAG = r'{\pos(960,960)}'
 NO_EN_ROMAJI_POS_TAG = r'{\pos(960,1010)}'
@@ -19,6 +20,8 @@ SECONDARY_ROMAJI_POS_TAG = r'{\pos(960,65)}'
 
 EN_POS_TAG = r"{\pos(960,1015)}"
 SECONDARY_EN_POS_TAG = r"{\pos(960,120)}"
+DIALOGUE_EN_POS_TAG = r"{\pos(960,996)}"
+SECONDARY_DIALOGUE_EN_POS_TAG = r"{\pos(960,84)}"
 
 K_IFX_TAG = r'\-'
 
@@ -172,7 +175,10 @@ def get_romaji_event_text(line, actorToStyle, withK=True, switchDuration: int=20
 
 def get_en_event_text(line, actorToStyle) -> str:
     s = get_style_tags(line, actorToStyle)
-    return SECONDARY_LYRICS_TAG + SECONDARY_EN_POS_TAG + s + line['en'] if line['secondary'] else LYRICS_TAG + EN_POS_TAG + s + line['en']
+    return SECONDARY_DIALOGUE_EN_POS_TAG + DIALOGUE_TAG + s + line['en'] if line['secondary'] and line['dialogue'] \
+        else DIALOGUE_EN_POS_TAG + DIALOGUE_TAG + s + line['en'] if not line['secondary'] and line['dialogue'] \
+        else SECONDARY_LYRICS_TAG + SECONDARY_EN_POS_TAG + s + line.get('en', '') if line['secondary'] \
+        else LYRICS_TAG + EN_POS_TAG + s + line.get('en', '')
 
 def get_title_event_text(song) -> str:
     s = TITLE_CARD_TAG
@@ -215,7 +221,10 @@ def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
                 text=get_romaji_event_text(line, actorToStyle),
             )
 
-        romajiEvents.append(romajiEvent)
+        if line['dialogue']:
+            romajiEvents.append(to_comment(romajiEvent))
+        else:
+            romajiEvents.append(romajiEvent)
 
         enLine = ass.line.Dialogue(
             style=EN_STYLE_NAME,
@@ -224,7 +233,7 @@ def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
             text=get_en_event_text(line, actorToStyle),
         )
 
-        if line['romaji'] != line['en']:
+        if line['romaji'] != line['en'] or line['dialogue']:
             enEvents.append(enLine)
         else:
             enEvents.append(to_comment(enLine))
