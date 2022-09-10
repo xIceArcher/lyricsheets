@@ -56,20 +56,17 @@ def parse_line(rowData, formatToActorMap):
 
     timeAndSyllablesIter = iter(timeAndSyllables)
     for i, (val1, val2) in enumerate(zip(timeAndSyllablesIter, timeAndSyllablesIter)):
-        syllable = {
+        syllables.append({
             'len': int(val1['formattedValue']),
             'text': val2['formattedValue']
-        }
-        
+        })
+
         currActor = formatToActorMap[color_to_hex(val2['effectiveFormat']['backgroundColor'])]
         if not actors or currActor != actors[-1]:
             actors.append(currActor)
             breakpoints.append(i)
-            syllable['ifx'] = currActor
-        
-        syllables.append(syllable)
-    
-    parsed_line = {
+
+    return {
         'en': values[get_column_idx('B')]['formattedValue'],
         'karaoke': values[get_column_idx('D')].get('formattedValue'),
         'romaji': ''.join([syllable['text'] for syllable in syllables]),
@@ -80,8 +77,6 @@ def parse_line(rowData, formatToActorMap):
         'actors': actors,
         'breakpoints': breakpoints,
     }
-
-    return parsed_line
 
 def scan_song(spreadsheetId, songName):
     ret = {}

@@ -161,7 +161,18 @@ def get_romaji_event_text(line, actorToStyle, withK=True, switchDuration: int=20
         # Make sure the syllable finishes before the line starts fading
         line['syllables'][-1]['len'] = max(line['syllables'][-1]['len'] - switchDuration // 10, 10)
 
-        s += ''.join([rf"{{\kf{syllable['len']}{K_IFX_TAG + str(syllable['ifx']) if 'ifx' in syllable else ''}}}{syllable['text']}" for syllable in line['syllables']])
+        currBreakpointIdx = 0
+
+        for i, syllable in enumerate(line['syllables']):
+            s += "{"
+            s += rf"\kf{syllable['len']}"
+
+            if currBreakpointIdx < len(line['breakpoints']) and i == line['breakpoints'][currBreakpointIdx]:
+                s += K_IFX_TAG + line['actors'][currBreakpointIdx]
+                currBreakpointIdx += 1
+
+            s += "}"
+            s += syllable['text']
 
     if line['secondary']:
         return SECONDARY_LYRICS_TAG + SECONDARY_ROMAJI_POS_TAG + s
