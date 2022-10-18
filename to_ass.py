@@ -145,6 +145,17 @@ def to_comment(line: ass.line.Dialogue) -> ass.line.Comment:
         text=line.text,
     )
 
+def get_title_event_text(song) -> str:
+    s = TITLE_CARD_TAG
+    s += rf"{song['title']['romaji']}\N"
+    s += rf"({song['title']['en']})\N" if 'en' in song['title'] else ''
+    s += rf"{song['artist']}\N"
+    s += rf"Composed by: {', '.join(song['composers'])}\N"
+    s += rf"Arranged by: {', '.join(song['arrangers'])}\N"
+    s += rf"Written by: {', '.join(song['writers'])}\N"
+
+    return s
+
 def get_style_tag(switchTime: int, style: str, switchDuration: int=200) -> str:
     return rf'{{\t({switchTime-switchDuration//2},{switchTime+switchDuration//2},{style})}}' if switchTime != 0 else rf'{{{style}}}'
 
@@ -184,23 +195,6 @@ def get_romaji_event_text(line, actorToStyle, withK=True, switchDuration: int=20
 def get_en_event_text(line, actorToStyle) -> str:
     s = get_style_tags(line, actorToStyle)
     return SECONDARY_LYRICS_TAG + SECONDARY_EN_POS_TAG + s + line['en'] if line['secondary'] else LYRICS_TAG + EN_POS_TAG + s + line['en']
-
-def get_title_event_text(song) -> str:
-    s = TITLE_CARD_TAG
-    s += rf"{song['title']['romaji']}\N"
-    s += rf"({song['title']['en']})\N" if 'en' in song['title'] else ''
-    s += rf"{song['artist']}\N"
-    s += rf"Composed by: {', '.join(song['composers'])}\N"
-    s += rf"Arranged by: {', '.join(song['arrangers'])}\N"
-    s += rf"Written by: {', '.join(song['writers'])}\N"
-
-    return s
-
-def get_song_events(spreadsheetId, songName, actorToStyle, shouldPrintTitle, modifiers: list[Modifier]=[]):
-    songJson = scan_song(spreadsheetId, songName)
-    songJson = modify_song(songJson, modifiers)
-
-    return get_song_json_events(songJson, actorToStyle, shouldPrintTitle)
 
 def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
     romajiEvents = []
@@ -269,6 +263,12 @@ def get_song_json_events(songJson, actorToStyle, shouldPrintTitle):
         ),
         *enEvents,
     ]
+
+def get_song_events(spreadsheetId, songName, actorToStyle, shouldPrintTitle, modifiers: list[Modifier]=[]):
+    songJson = scan_song(spreadsheetId, songName)
+    songJson = modify_song(songJson, modifiers)
+
+    return get_song_json_events(songJson, actorToStyle, shouldPrintTitle)
 
 def main():
     parser = argparse.ArgumentParser(
