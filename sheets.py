@@ -18,7 +18,7 @@ with open(CONFIG_PATH) as f:
     service = discovery.build('sheets', 'v4', credentials=service_account.Credentials.from_service_account_info(config['google_credentials'], scopes=SCOPES)).spreadsheets()
     spreadsheetId = config['spreadsheet_id']
 
-def get_sheets_properties(spreadsheetId):
+def get_sheets_properties(spreadsheetId) -> dict[str, str]:
     resp = service.get(spreadsheetId=spreadsheetId,fields='sheets.properties').execute()
     return {sheet['properties']['title']: sheet['properties']['sheetId'] for sheet in resp['sheets']}
 

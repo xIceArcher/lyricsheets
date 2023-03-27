@@ -1,32 +1,32 @@
 import argparse
+from models import Song, SongCreators, SongLine, SongLineSyllable, SongTitle
+import pyass
 
 from sheets import *
 
-def scan_title(spreadsheetId, sheetName, range='B1:B2'):
+def scan_title(spreadsheetId, sheetName, range='B1:B2') -> SongTitle:
     result = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{range}').execute()['values']
 
-    ret = {
-        'title': {
-            'romaji': result[0][0],
-        }
-    }
+    ret = SongTitle(
+        romaji=result[0][0]
+    )
 
     if len(result) > 1:
-        ret['title']['en'] = result[1][0]
+        ret.en = result[1][0]
 
     return ret
 
-def scan_creators(spreadsheetId, sheetName, range='E1:E4'):
+def scan_creators(spreadsheetId, sheetName, range='E1:E4') -> SongCreators:
     result = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{range}').execute()['values']
 
-    return {
-        'artist': result[0][0],
-        'composers': [composer.strip() for composer in result[1][0].split(',')],
-        'arrangers': [composer.strip() for composer in result[2][0].split(',')],
-        'writers': [composer.strip() for composer in result[3][0].split(',')],
-    }
+    return SongCreators(
+        artist=result[0][0],
+        composers=[composer.strip() for composer in result[1][0].split(',')],
+        arrangers=[composer.strip() for composer in result[2][0].split(',')],
+        writers=[composer.strip() for composer in result[3][0].split(',')],
+    )
 
-def scan_lyrics(spreadsheetId, sheetName, rootPos='A6'):
+def scan_lyrics(spreadsheetId, sheetName, rootPos='A6') -> list[SongLine]:
     rootPosRow = get_row(rootPos)
     rootPosCol = get_column(rootPos)
 
@@ -40,52 +40,45 @@ def scan_lyrics(spreadsheetId, sheetName, rootPos='A6'):
     ).execute()
 
     formatToActorMap = {color_to_hex(format['backgroundColor']): actor for actor, format in get_format_map(spreadsheetId).items()}
-    return {
-        'lyrics': {
-            'detailed': [parse_line(line, formatToActorMap) for line in result['sheets'][0]['data'][0]['rowData'] if 'formattedValue' in line['values'][1]]
-        }
-    }
+    return [parse_line(line, formatToActorMap) for line in result['sheets'][0]['data'][0]['rowData'] if 'formattedValue' in line['values'][1]]
 
-def parse_line(rowData, formatToActorMap):
+def parse_line(rowData, formatToActorMap) -> SongLine:
     values = rowData['values']
     timeAndSyllables = [syllable for syllable in values[get_column_idx('I'):] if 'formattedValue' in syllable]
 
-    syllables = []
-    actors = []
-    breakpoints = []
+    syllables: list[SongLineSyllable] = []
+    actors: list[str] = []
+    breakpoints: list[int] = []
 
     timeAndSyllablesIter = iter(timeAndSyllables)
     for i, (val1, val2) in enumerate(zip(timeAndSyllablesIter, timeAndSyllablesIter)):
-        syllables.append({
-            'len': int(val1['formattedValue']),
-            'text': val2['formattedValue']
-        })
+        syllables.append(SongLineSyllable(
+            pyass.timedelta(centiseconds=int(val1['formattedValue'])),
+            val2['formattedValue']
+        ))
 
         currActor = formatToActorMap[color_to_hex(val2['effectiveFormat']['backgroundColor'])]
         if not actors or currActor != actors[-1]:
             actors.append(currActor)
             breakpoints.append(i)
 
-    return {
-        'en': values[get_column_idx('B')]['formattedValue'],
-        'karaoke': values[get_column_idx('D')].get('formattedValue'),
-        'romaji': ''.join([syllable['text'] for syllable in syllables]),
-        'secondary': 'formattedValue' in values[get_column_idx('F')],
-        'start': values[get_column_idx('G')]['formattedValue'],
-        'end': values[get_column_idx('H')]['formattedValue'],
-        'syllables': syllables,
-        'actors': actors,
-        'breakpoints': breakpoints,
-    }
+    return SongLine(
+        en=values[get_column_idx('B')]['formattedValue'],
+        karaokeEffect=values[get_column_idx('D')].get('formattedValue'),
+        isSecondary='formattedValue' in values[get_column_idx('F')],
+        start=pyass.timedelta.parse(values[get_column_idx('G')]['formattedValue']),
+        end=pyass.timedelta.parse(values[get_column_idx('H')]['formattedValue']),
+        syllables=syllables,
+        actors=actors,
+        breakpoints=breakpoints,
+    )
 
-def scan_song(spreadsheetId, songName):
-    ret = {}
-
-    ret.update(scan_title(spreadsheetId, songName))
-    ret.update(scan_creators(spreadsheetId, songName))
-    ret.update(scan_lyrics(spreadsheetId, songName))
-
-    return ret
+def scan_song(spreadsheetId, songName) -> Song:
+    return Song(
+        title=scan_title(spreadsheetId, songName),
+        creators=scan_creators(spreadsheetId, songName),
+        lyrics=scan_lyrics(spreadsheetId, songName),
+    )
 
 def main():
     parser = argparse.ArgumentParser(

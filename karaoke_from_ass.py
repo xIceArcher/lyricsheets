@@ -1,4 +1,5 @@
 import argparse
+from models import Song, SongTitle
 
 from print import *
 from from_ass import *
@@ -15,15 +16,13 @@ def main():
     if not os.path.isfile(args.input_fname):
         raise Exception(f'{args.input_fname} is not a file')
 
-    detailedLyrics = read_karaoke(args.input_fname)
-    song = {
-        'title': {
-            'romaji': args.title
-        },
-        'lyrics': {
-            'detailed': detailedLyrics
-        }
-    }
+    lyrics = read_karaoke(args.input_fname)
+    song = Song(
+        title=SongTitle(
+            romaji=args.title
+        ),
+        lyrics=lyrics,
+    )
 
     create_new_song_sheet(spreadsheetId, song)
     print_title(spreadsheetId, args.title, song)
