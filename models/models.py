@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
+from typing import Optional
+
+from dataclass_wizard import JSONWizard
 
 @dataclass
 class SongTitle:
@@ -14,7 +17,7 @@ class SongLineSyllable:
 @dataclass
 class SongLine:
     en: str = ''
-    karaokeEffect: str = ''
+    karaokeEffect: Optional[str] = None
     isSecondary: bool = False
     start: timedelta = timedelta()
     end: timedelta = timedelta()
@@ -38,9 +41,10 @@ class SongCreators:
     writers: list[str] = field(default_factory=list)
 
 @dataclass
-class Song:
+class Song(JSONWizard):
+    class _(JSONWizard.Meta):
+        skip_defaults = True
+
     title: SongTitle = SongTitle()
     creators: SongCreators = SongCreators()
     lyrics: list[SongLine] = field(default_factory=list)
-
-    shouldRunKaraokeTemplater: bool = False

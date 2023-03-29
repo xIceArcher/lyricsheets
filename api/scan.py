@@ -1,8 +1,15 @@
-import pyass
+from datetime import timedelta
 
-from sheets import *
+from .sheets import *
 
 from ..models import models
+
+def parseTimedelta(s: str):
+    s_str, _, cs_str = s.partition(".")
+    hrs, mins, secs = map(int, s_str.split(":"))
+    cs = int(cs_str)
+
+    return timedelta(hours=hrs, minutes=mins, seconds=secs, milliseconds=cs*10)
 
 def scan_title(service, spreadsheetId, sheetName, range='B1:B2') -> models.SongTitle:
     result = service.values().get(spreadsheetId=spreadsheetId, range=f'{sheetName}!{range}').execute()['values']
@@ -53,7 +60,7 @@ def parse_line(rowData, formatToActorMap) -> models.SongLine:
     timeAndSyllablesIter = iter(timeAndSyllables)
     for i, (val1, val2) in enumerate(zip(timeAndSyllablesIter, timeAndSyllablesIter)):
         syllables.append(models.SongLineSyllable(
-            pyass.timedelta(centiseconds=int(val1['formattedValue'])),
+            timedelta(milliseconds=int(val1['formattedValue'])*10),
             val2['formattedValue']
         ))
 
@@ -66,8 +73,8 @@ def parse_line(rowData, formatToActorMap) -> models.SongLine:
         en=values[get_column_idx('B')]['formattedValue'],
         karaokeEffect=values[get_column_idx('D')].get('formattedValue'),
         isSecondary='formattedValue' in values[get_column_idx('F')],
-        start=pyass.timedelta.parse(values[get_column_idx('G')]['formattedValue']),
-        end=pyass.timedelta.parse(values[get_column_idx('H')]['formattedValue']),
+        start=parseTimedelta(values[get_column_idx('G')]['formattedValue']),
+        end=parseTimedelta(values[get_column_idx('H')]['formattedValue']),
         syllables=syllables,
         actors=actors,
         breakpoints=breakpoints,
