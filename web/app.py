@@ -1,10 +1,10 @@
 import json
 
 from ..api import api
+from ..cache import RedisCache
 
 from flask import Flask
 from flask.wrappers import Response
-from dataclass_wizard import asdict
 
 
 config_file_path = './config.json'
@@ -13,9 +13,9 @@ with open(config_file_path) as f:
     cfg = json.load(f)
     redis_cfg = cfg['redis']
 
-songAPI = api.CachedSongServer(
+songAPI = api.SongServer(
     cfg['google_credentials'], cfg['spreadsheet_id'],
-    redis_cfg['host'], redis_cfg['port'], redis_cfg['db']
+    RedisCache(redis_cfg['host'], redis_cfg['port'], redis_cfg['db'])
 )
 app = Flask(__name__)
 

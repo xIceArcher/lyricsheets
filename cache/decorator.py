@@ -1,9 +1,12 @@
+from datetime import timedelta
 import pickle
 from typing import Optional
 
-def with_cache(keyPrefix: str, expiry: Optional[float] = None):
+from .models import Cacheable
+
+def with_cache(keyPrefix: str, expiry: Optional[float | timedelta] = None):
     def _with_cache(f):
-        def wrapper(self, *args, **kwargs):
+        def wrapper(self: Cacheable, *args: str, **kwargs):
             if kwargs:
                 raise RuntimeError('kwargs not allowed when using with_cache decorator')
 
