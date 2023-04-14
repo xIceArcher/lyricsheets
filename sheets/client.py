@@ -16,10 +16,10 @@ class GoogleSheetsClient:
             credentials=service_account.Credentials.from_service_account_info(googleCredentials, scopes=GoogleSheetsClient.SCOPES)
         ).spreadsheets()
 
-    def get_values(self, spreadsheetId: str, range: str):
+    def get_values(self, spreadsheetId: str, range: str = ''):
         return self.service.values().get(spreadsheetId=spreadsheetId, range=range).execute()['values']
 
-    def get(self, spreadsheetId: str, ranges: Sequence[str], fields: str):
+    def get(self, spreadsheetId: str, ranges: Sequence[str] = [], fields: str = ''):
         return self.service.get(spreadsheetId=spreadsheetId, ranges=ranges, fields=fields).execute()
 
     def get_row(self, cellRef: str) -> int:
@@ -68,9 +68,9 @@ class RateLimitedGoogleSheetsClient(GoogleSheetsClient):
         self.bucket = Limiter(rate=60, capacity=60, storage=MemoryStorage())
 
     @token_bucket('read', 1)
-    def get_values(self, spreadsheetId: str, range: str):
+    def get_values(self, spreadsheetId: str, range: str = ''):
         return super().get_values(spreadsheetId, range)
 
     @token_bucket('read', 1)
-    def get(self, spreadsheetId: str, ranges: Sequence[str], fields: str):
+    def get(self, spreadsheetId: str, ranges: Sequence[str] = [], fields: str = ''):
         return super().get(spreadsheetId, ranges, fields)

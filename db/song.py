@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import timedelta
 from typing import Optional, Any
 
@@ -13,6 +13,17 @@ class SongTemplateDB:
             self.sheetsClient = client
         else:
             self.sheetsClient = RateLimitedGoogleSheetsClient(googleCredentials)
+
+    def get_sheet_name_to_id_map(self, spreadsheetId: str) -> Mapping[str, str]:
+        resp = self.sheetsClient.get(
+            spreadsheetId,
+            fields='sheets.properties',
+        )
+
+        return {
+            sheet['properties']['title']: sheet['properties']['sheetId']
+            for sheet in resp['sheets']
+        }
 
     def get_format_map(self, spreadsheetId: str) -> Mapping[str, Any]:
         rootPos = 'I1'
@@ -39,7 +50,10 @@ class SongDB:
 
         self.songTemplateDB = SongTemplateDB(googleCredentials, self.sheetsClient)
 
-    def scan_song(self, spreadsheetId: str, songName: str) -> models.Song:
+    def list_song_names(self, spreadsheetId: str) -> Sequence[str]:
+        return list(self.songTemplateDB.get_sheet_name_to_id_map(spreadsheetId).keys())
+
+    def get_song(self, spreadsheetId: str, songName: str) -> models.Song:
         return models.Song(
             title=self.get_title(spreadsheetId, songName),
             creators=self.get_creators(spreadsheetId, songName),

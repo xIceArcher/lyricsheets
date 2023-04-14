@@ -1,0 +1,37 @@
+from collections.abc import Mapping
+from typing import Optional
+import string
+
+from ..models import Song
+from ..db import SongDB
+from ..cache import Cache
+from .service import SongService, NotFoundError
+
+
+class SongServiceByDB(SongService):
+    def __init__(
+        self,
+        googleCredentials: Mapping[str, str],
+        defaultSpreadsheetId: str = "",
+        cache: Optional[Cache] = None,
+    ) -> None:
+        self.defaultSpreadsheetId = defaultSpreadsheetId
+        self.service = SongDB(googleCredentials)
+
+    def get_song(self, songName: str, spreadsheetId: str = "") -> Song:
+        songKeyToFind = self._to_song_key(songName)
+
+        for existingSongName in self.service.list_song_names(spreadsheetId):
+            if self._to_song_key(existingSongName) == songKeyToFind:
+                return self.service.get_song(
+                    self.defaultSpreadsheetId if not spreadsheetId else spreadsheetId,
+                    existingSongName,
+                )
+
+        raise NotFoundError(spreadsheetId, songName)
+
+    def _to_song_key(self, songName: str):
+        return "".join(
+            "" if c in string.punctuation or c in string.whitespace else c
+            for c in songName.encode("ascii", "ignore").decode().lower()
+        )

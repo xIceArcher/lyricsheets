@@ -48,3 +48,11 @@ class Song(JSONWizard):
     title: SongTitle = SongTitle()
     creators: SongCreators = SongCreators()
     lyrics: list[SongLine] = field(default_factory=list)
+
+    @property
+    def start(self) -> timedelta:
+        return self.lyrics[0].start
+
+    @property
+    def end(self) -> timedelta:
+        return self.lyrics[-1].end
