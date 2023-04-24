@@ -1,5 +1,6 @@
 from collections.abc import Mapping, Sequence
 from datetime import timedelta
+import itertools
 from typing import Optional, Any
 
 from src.cache import Cache, with_cache
@@ -104,62 +105,59 @@ class SongDB:
 
     @with_cache("SongDB::get_song")
     def get_song(self, spreadsheetId: str, songName: str) -> song.Song:
+        resp = self.sheetsClient.get(
+            spreadsheetId,
+            ranges=[f"'{songName}'"],
+            fields="sheets.data.rowData.values(formattedValue,userEnteredFormat(backgroundColor,textFormat.foregroundColor))",
+        )
+        data = resp["sheets"][0]["data"][0]["rowData"]
+
         return song.Song(
-            title=self.get_title(spreadsheetId, songName),
-            creators=self.get_creators(spreadsheetId, songName),
-            lyrics=list(self.get_lyrics(spreadsheetId, songName)),
+            title=self._parse_title(data),
+            creators=self._parse_creators(data),
+            lyrics=list(self._parse_lyrics(spreadsheetId, data)),
         )
 
-    @with_cache("SongDB::get_title")
-    def get_title(self, spreadsheetId: str, songName: str) -> song.SongTitle:
-        result = self.sheetsClient.get_values(spreadsheetId, f"{songName}!B1:B2")
+    def _parse_title(self, sheetData) -> song.SongTitle:
+        col = self.sheetsClient.get_column_idx("B")
+        ret = song.SongTitle(romaji=sheetData[0]["values"][col]["formattedValue"])
 
-        ret = song.SongTitle(romaji=result[0][0])
-
-        if len(result) > 1:
-            ret.en = result[1][0]
+        if "formattedValue" in sheetData[1]["values"][col]:
+            ret.en = sheetData[1]["values"][col]["formattedValue"]
 
         return ret
 
-    @with_cache("SongDB::get_creators")
-    def get_creators(self, spreadsheetId: str, songName: str) -> song.SongCreators:
-        result = self.sheetsClient.get_values(spreadsheetId, f"{songName}!E1:E4")
+    def _parse_creators(self, sheetData) -> song.SongCreators:
+        col = self.sheetsClient.get_column_idx("E")
 
         return song.SongCreators(
-            artist=result[0][0],
-            composers=[composer.strip() for composer in result[1][0].split(",")],
-            arrangers=[composer.strip() for composer in result[2][0].split(",")],
-            writers=[composer.strip() for composer in result[3][0].split(",")],
-        )
-
-    @with_cache("SongDB::get_lyrics")
-    def get_lyrics(self, spreadsheetId: str, songName: str) -> Sequence[song.SongLine]:
-        rootPos = "A6"
-        rootPosRow = self.sheetsClient.get_row(rootPos)
-        rootPosCol = self.sheetsClient.get_column(rootPos)
-
-        enLines = self.sheetsClient.get_values(
-            spreadsheetId, f"{songName}!B{rootPosRow}:B"
-        )
-
-        result = self.sheetsClient.get(
-            spreadsheetId,
-            ranges=[
-                f"{songName}!{rootPosCol}{rootPosRow}:{rootPosRow + len(enLines) - 1}"
+            artist=sheetData[0]["values"][col]["formattedValue"],
+            composers=[
+                composer.strip()
+                for composer in sheetData[1]["values"][col]["formattedValue"].split(",")
             ],
-            fields="sheets.data.rowData.values(formattedValue,effectiveFormat.backgroundColor)",
+            arrangers=[
+                composer.strip()
+                for composer in sheetData[2]["values"][col]["formattedValue"].split(",")
+            ],
+            writers=[
+                composer.strip()
+                for composer in sheetData[3]["values"][col]["formattedValue"].split(",")
+            ],
         )
 
+    def _parse_lyrics(self, spreadsheetId: str, sheetData) -> Sequence[song.SongLine]:
         colorToActorMap = {
             self.sheetsClient.color_to_hex(format["backgroundColor"]): actor
             for actor, format in self.songTemplateDB.get_format_map(
                 spreadsheetId
             ).items()
         }
+
         return [
             self._parse_line(line, colorToActorMap)
-            for line in result["sheets"][0]["data"][0]["rowData"]
-            if "formattedValue" in line["values"][1]
+            for line in itertools.islice(sheetData, 5, None, 1)
+            if "values" in line and "formattedValue" in line["values"][1]
         ]
 
     def _parse_line(
@@ -189,7 +187,7 @@ class SongDB:
 
             currActor = colorToActorMap[
                 self.sheetsClient.color_to_hex(
-                    val2["effectiveFormat"]["backgroundColor"]
+                    val2['userEnteredFormat']["backgroundColor"]
                 )
             ]
             if not actors or currActor != actors[-1]:
