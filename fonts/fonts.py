@@ -5,6 +5,7 @@ import math
 from PIL import ImageFont
 from matplotlib.font_manager import findSystemFonts
 
+
 class FontScaler:
     def __init__(self, fontName: str, fontSize: int) -> None:
         self.font = _find_font(fontName, fontSize)
@@ -31,8 +32,10 @@ class FontScaler:
 
         return ans
 
+
 class FontNotFoundException(Exception):
     pass
+
 
 @cache
 def _find_font(fontName: str, fontSize: int) -> ImageFont.FreeTypeFont:
@@ -44,4 +47,4 @@ def _find_font(fontName: str, fontSize: int) -> ImageFont.FreeTypeFont:
         except:
             continue
 
-    raise FontNotFoundException
+    raise FontNotFoundException(fontName)

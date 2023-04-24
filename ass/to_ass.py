@@ -37,7 +37,7 @@ def get_fade_transform_tags(
     offset: timedelta,
     switchDuration: timedelta,
     transitionDuration: timedelta,
-) -> list[pyass.Tag]:
+) -> Sequence[pyass.Tag]:
     return [
         pyass.AlphaTag(0xFF),
         pyass.TransformTag(
@@ -55,15 +55,15 @@ def get_fade_transform_tags(
 
 def get_style_tag(
     switchTime: timedelta,
-    style: list[pyass.Tag],
+    style: Sequence[pyass.Tag],
     switchDuration: timedelta,
-) -> list[pyass.Tag]:
+) -> Sequence[pyass.Tag]:
     return (
         [
             pyass.TransformTag(
                 start=switchTime - switchDuration / 2,
                 end=switchTime + switchDuration / 2,
-                to=style,
+                to=list(style),
             )
         ]
         if switchTime != timedelta()
@@ -73,9 +73,9 @@ def get_style_tag(
 
 def get_style_tags(
     line: SongLine,
-    actorToStyle: Mapping[str, list[pyass.Tag]],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
-) -> list[pyass.Tag]:
+) -> Sequence[pyass.Tag]:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -162,7 +162,7 @@ def to_karaoke_effect_romaji_event(
 
 def to_fade_effect_romaji_event(
     line: SongLine,
-    actorToStyle: Mapping[str, list[pyass.Tag]],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
@@ -236,7 +236,7 @@ def to_fade_effect_romaji_event(
 def to_romaji_event(
     line: SongLine,
     songTitle: SongTitle,
-    actorToStyle: Mapping[str, list[pyass.Tag]],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
@@ -250,7 +250,7 @@ def to_romaji_event(
 
 def to_karaoke_effect_en_event(
     line: SongLine,
-    actorToStyle: Mapping[str, list[pyass.Tag]],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
@@ -262,7 +262,7 @@ def to_karaoke_effect_en_event(
 
 def to_fade_effect_en_event(
     line: SongLine,
-    actorToStyle: Mapping[str, list[pyass.Tag]],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
@@ -272,7 +272,9 @@ def to_fade_effect_en_event(
     ).split_by_rendered_width(
         pyass.timedelta(transitionDuration).total_milliseconds(), line.en
     )
-    charOffsetsFromLineStart = itertools.accumulate([timedelta(milliseconds=m) for m in lineCharTimes], initial=timedelta(0))
+    charOffsetsFromLineStart = itertools.accumulate(
+        [timedelta(milliseconds=m) for m in lineCharTimes], initial=timedelta(0)
+    )
 
     return pyass.Event(
         format=get_line_format(line),
@@ -304,7 +306,7 @@ def to_fade_effect_en_event(
 
 def to_en_event(
     line: SongLine,
-    actorToStyle: Mapping[str, list[pyass.Tag]],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
@@ -320,7 +322,7 @@ def to_en_event(
 
 def to_events(
     song: Song,
-    actorToStyle: Mapping[str, list[pyass.Tag]],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     shouldPrintTitle: bool = True,
     switchDuration: timedelta = DEFAULT_SWITCH_DURATION,
     transitionDuration: timedelta = DEFAULT_TRANSITION_DURATION,
