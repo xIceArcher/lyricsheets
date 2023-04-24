@@ -5,8 +5,8 @@ import itertools
 
 import pyass
 
-from ..fonts import FontScaler
-from ..models import Song, SongLine, SongTitle
+from src.fonts import FontScaler
+from src.models import Song, SongLine, SongTitle
 
 from .consts import *
 
