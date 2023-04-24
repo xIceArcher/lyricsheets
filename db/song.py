@@ -2,6 +2,7 @@ from collections.abc import Mapping, Sequence
 from datetime import timedelta
 from typing import Optional, Any
 
+from ..cache import Cache, with_cache
 from ..models import *
 from ..sheets import GoogleSheetsClient, RateLimitedGoogleSheetsClient
 
@@ -13,12 +14,16 @@ class SongTemplateDB:
         self,
         googleCredentials: Mapping[str, str],
         client: Optional[GoogleSheetsClient] = None,
+        cache: Optional[Cache] = None,
     ) -> None:
         if client is not None:
             self.sheetsClient = client
         else:
             self.sheetsClient = RateLimitedGoogleSheetsClient(googleCredentials)
 
+        self.cache = cache
+
+    @with_cache("SongTemplateDB::get_sheet_name_to_id_map")
     def get_sheet_name_to_id_map(self, spreadsheetId: str) -> Mapping[str, str]:
         resp = self.sheetsClient.get(
             spreadsheetId,
@@ -30,6 +35,7 @@ class SongTemplateDB:
             for sheet in resp["sheets"]
         }
 
+    @with_cache("SongTemplateDB::get_format_map")
     def get_format_map(self, spreadsheetId: str) -> Mapping[str, Any]:
         rootPos = "I1"
         rootPosRow = self.sheetsClient.get_row("I1") + 1
@@ -52,23 +58,51 @@ class SongTemplateDB:
             )
         }
 
+    @with_cache("SongTemplateDB::get_format_tags")
+    def get_format_tags(self, spreadsheetId: str) -> Mapping[str, str]:
+        rootPos = "I1"
+        row = self.sheetsClient.get_row(rootPos) + 1
+
+        resp = self.sheetsClient.get(
+            spreadsheetId,
+            ranges=f"{SongTemplateDB.TEMPLATE_SHEET_NAME}!{rootPos}:{row}",
+            fields="sheets.data.rowData.values.userEnteredValue",
+        )
+
+        respIter0 = iter(resp["sheets"][0]["data"][0]["rowData"][0]["values"])
+        respIter1 = iter(resp["sheets"][0]["data"][0]["rowData"][1]["values"])
+
+        return {
+            formatKey["userEnteredValue"]["stringValue"]: formatStr["userEnteredValue"][
+                "stringValue"
+            ]
+            for formatStr, formatKey in zip(respIter0, respIter1)
+            if "userEnteredValue" in formatStr and "userEnteredValue" in formatKey
+        }
+
 
 class SongDB:
     def __init__(
         self,
         googleCredentials: Mapping[str, str],
         client: Optional[GoogleSheetsClient] = None,
+        cache: Optional[Cache] = None,
     ) -> None:
         if client is not None:
             self.sheetsClient = client
         else:
             self.sheetsClient = RateLimitedGoogleSheetsClient(googleCredentials)
 
-        self.songTemplateDB = SongTemplateDB(googleCredentials, self.sheetsClient)
+        self.songTemplateDB = SongTemplateDB(
+            googleCredentials, self.sheetsClient, cache
+        )
+        self.cache = cache
 
+    @with_cache("SongDB::list_song_names")
     def list_song_names(self, spreadsheetId: str) -> Sequence[str]:
         return list(self.songTemplateDB.get_sheet_name_to_id_map(spreadsheetId).keys())
 
+    @with_cache("SongDB::get_song")
     def get_song(self, spreadsheetId: str, songName: str) -> song.Song:
         return song.Song(
             title=self.get_title(spreadsheetId, songName),
@@ -76,6 +110,7 @@ class SongDB:
             lyrics=list(self.get_lyrics(spreadsheetId, songName)),
         )
 
+    @with_cache("SongDB::get_title")
     def get_title(self, spreadsheetId: str, songName: str) -> song.SongTitle:
         result = self.sheetsClient.get_values(spreadsheetId, f"{songName}!B1:B2")
 
@@ -86,6 +121,7 @@ class SongDB:
 
         return ret
 
+    @with_cache("SongDB::get_creators")
     def get_creators(self, spreadsheetId: str, songName: str) -> song.SongCreators:
         result = self.sheetsClient.get_values(spreadsheetId, f"{songName}!E1:E4")
 
@@ -96,6 +132,7 @@ class SongDB:
             writers=[composer.strip() for composer in result[3][0].split(",")],
         )
 
+    @with_cache("SongDB::get_lyrics")
     def get_lyrics(self, spreadsheetId: str, songName: str) -> Sequence[song.SongLine]:
         rootPos = "A6"
         rootPosRow = self.sheetsClient.get_row(rootPos)

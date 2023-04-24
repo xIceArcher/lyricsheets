@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections.abc import Mapping
 
 from ..models import Song
 
@@ -10,4 +11,8 @@ class NotFoundError(Exception):
 class SongService:
     @abstractmethod
     def get_song(self, songName: str, spreadsheetId: str = "") -> Song:
+        ...
+
+    @abstractmethod
+    def get_format_tags(self, spreadsheetId: str = "") -> Mapping[str, str]:
         ...

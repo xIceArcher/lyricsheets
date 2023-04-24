@@ -4,7 +4,7 @@ import string
 
 from ..models import Song
 from ..db import SongDB
-from ..cache import Cache
+from ..cache import Cache, with_cache
 from .service import SongService, NotFoundError
 
 
@@ -16,8 +16,10 @@ class SongServiceByDB(SongService):
         cache: Optional[Cache] = None,
     ) -> None:
         self.defaultSpreadsheetId = defaultSpreadsheetId
-        self.service = SongDB(googleCredentials)
+        self.service = SongDB(googleCredentials, cache=cache)
+        self.cache = cache
 
+    @with_cache("SongServiceByDB::get_song")
     def get_song(self, songName: str, spreadsheetId: str = "") -> Song:
         if spreadsheetId == "":
             spreadsheetId = self.defaultSpreadsheetId
@@ -38,3 +40,10 @@ class SongServiceByDB(SongService):
             "" if c in string.punctuation or c in string.whitespace else c
             for c in songName.encode("ascii", "ignore").decode().lower()
         )
+
+    @with_cache("SongServiceByDB::get_format_tags")
+    def get_format_tags(self, spreadsheetId: str = "") -> Mapping[str, str]:
+        if spreadsheetId == "":
+            spreadsheetId = self.defaultSpreadsheetId
+
+        return self.service.songTemplateDB.get_format_tags(spreadsheetId)
