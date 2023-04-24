@@ -25,7 +25,7 @@ TITLE_STYLE = pyass.Style(
 
 ROMAJI_STYLE = pyass.Style(
     name="Song - JP",
-    fontName="Proxima Nova Th",
+    fontName="Proxima Nova",
     fontSize=58,
     isBold=True,
     outline=1.5,
@@ -46,6 +46,13 @@ EN_STYLE = pyass.Style(
     marginR=113,
     marginV=45,
 )
+
+REQUIRED_STYLES = [
+    DIVIDER_STYLE,
+    TITLE_STYLE,
+    ROMAJI_STYLE,
+    EN_STYLE,
+]
 
 # Tags
 TITLE_CARD_TAGS = pyass.Tags(

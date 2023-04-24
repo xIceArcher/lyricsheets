@@ -2,22 +2,16 @@ import argparse
 import pyass
 import re
 import subprocess
-import time
+
+from ass import REQUIRED_STYLES
 
 from .consts import *
 
 
 def populate_styles(styles: list[pyass.Style]) -> list[pyass.Style]:
-    requiredStyles = {
-        DIVIDER_STYLE.name: DIVIDER_STYLE,
-        TITLE_STYLE.name: TITLE_STYLE,
-        ROMAJI_STYLE.name: ROMAJI_STYLE,
-        EN_STYLE.name: EN_STYLE,
-    }
-
     currStyles = {style.name: style for style in styles}
-    for requiredStyleName, requiredStyle in requiredStyles.items():
-        if requiredStyleName not in currStyles:
+    for requiredStyle in REQUIRED_STYLES:
+        if requiredStyle.name not in currStyles:
             styles.append(requiredStyle)
 
     return styles

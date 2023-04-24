@@ -13,9 +13,9 @@ from .consts import *
 
 def get_line_format(line: SongLine) -> pyass.EventFormat:
     return (
-        pyass.EventFormat.DIALOGUE
+        pyass.EventFormat.COMMENT
         if line.romaji == line.en
-        else pyass.EventFormat.COMMENT
+        else pyass.EventFormat.DIALOGUE
     )
 
 
@@ -272,17 +272,7 @@ def to_fade_effect_en_event(
     ).split_by_rendered_width(
         pyass.timedelta(transitionDuration).total_milliseconds(), line.en
     )
-
-    charOffsetsFromLineStart: list[timedelta] = []
-    for i, lineCharTime in enumerate(
-        [timedelta(milliseconds=m) for m in lineCharTimes]
-    ):
-        if i == 0:
-            charOffsetsFromLineStart.append(lineCharTime)
-        else:
-            charOffsetsFromLineStart.append(
-                charOffsetsFromLineStart[i - 1] + lineCharTime
-            )
+    charOffsetsFromLineStart = itertools.accumulate([timedelta(milliseconds=m) for m in lineCharTimes], initial=timedelta(0))
 
     return pyass.Event(
         format=get_line_format(line),

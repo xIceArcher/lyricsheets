@@ -19,6 +19,9 @@ class SongServiceByDB(SongService):
         self.service = SongDB(googleCredentials)
 
     def get_song(self, songName: str, spreadsheetId: str = "") -> Song:
+        if spreadsheetId == "":
+            spreadsheetId = self.defaultSpreadsheetId
+
         songKeyToFind = self._to_song_key(songName)
 
         for existingSongName in self.service.list_song_names(spreadsheetId):
