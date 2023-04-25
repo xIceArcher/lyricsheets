@@ -73,7 +73,7 @@ class GoogleSheetsClient:
         return f"{r:02x}{g:02x}{b:02x}"
 
     def is_white(self, color: Mapping[str, int]) -> bool:
-        return self.color_to_hex(color) == "FFFFFF"
+        return self.color_to_hex(color).upper() == "FFFFFF"
 
 
 class RateLimitedGoogleSheetsClient(GoogleSheetsClient):
