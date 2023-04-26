@@ -1,123 +1,153 @@
 import argparse
-import ass
-import re
-import string
+from collections.abc import Mapping, Sequence
+from datetime import timedelta
+import functools
+import json
+import pyass
 import subprocess
-import time
 
-from sheets import *
-from to_ass import *
-from modifier import *
+from src.ass import REQUIRED_STYLES, to_events
+from src.cache import MemoryCache
+from src.service import SongService, SongServiceByDB
+from src.models import Modifiers
 
-SONG_STYLE_NAME = 'Song'
+SONG_STYLE_NAME = "Song"
 
-TAGS_REGEX = r'\{[^\}]+\}'
-LYRICS_MODIFIER_TAG_REGEX = r'\{\\lyricsmodify\(([^\)]+)\)}'
+EVENT_EFFECT_TEMPLATE = "template"
+EVENT_EFFECT_CODE = "code"
 
-TEMPLATE = 'template'
-CODE = 'code'
 
-def normalize_song_name(songName: str):
-    asciiSongName = songName.encode('ascii', 'ignore').decode().lower()
-    return ''.join('' if c in string.punctuation or c in string.whitespace else c for c in asciiSongName)
+def populate_styles(styles: Sequence[pyass.Style]) -> Sequence[pyass.Style]:
+    ret = list(styles)
 
-def get_full_song_name(spreadsheetId, inSongName: str):
-    searchKey = normalize_song_name(inSongName)
+    currStyles = {style.name: style for style in styles}
+    for requiredStyle in REQUIRED_STYLES:
+        if requiredStyle.name not in currStyles:
+            ret.append(requiredStyle)
 
-    songNames = get_sheets_properties(spreadsheetId).keys()
-    for songName in songNames:
-        if normalize_song_name(songName) == searchKey:
-            return songName
+    return ret
 
-def populate_songs(spreadsheetId, inEvents, shouldPrintTitle):
+
+def filter_old_song_lines(events: Sequence[pyass.Event]) -> Sequence[pyass.Event]:
+    return [
+        event
+        for event in events
+        if event.style == SONG_STYLE_NAME
+        or not event.style.startswith(SONG_STYLE_NAME)
+        or EVENT_EFFECT_TEMPLATE in event.effect
+        or EVENT_EFFECT_CODE in event.effect
+    ]
+
+
+def populate_song(
+    songService: SongService,
+    inEvent: pyass.Event,
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    shouldPrintTitle: bool,
+) -> Sequence[pyass.Event]:
     outEvents = []
 
-    songCount = 0
+    inEvent.format = pyass.EventFormat.COMMENT
+    outEvents.append(inEvent)
+
+    modifierTags = [
+        tag.text.removeprefix("\\lyricsmodify(").removesuffix(")")
+        for tag in functools.reduce(lambda ls, x: ls + x.tags, inEvent.parts, [])
+        if isinstance(tag, pyass.tag.UnknownTag)
+        and tag.text.startswith("\\lyricsmodify")
+    ]
+    allModifiers = functools.reduce(
+        lambda ls, x: ls + Modifiers.parse(x), modifierTags, []
+    )
+
+    songName = inEvent.parts[0].text
+    print(f"Populating {songName}")
+
+    song = songService.get_song(songName).modify(Modifiers(allModifiers))
+
+
+    songEvents = to_events(song, actorToStyle, shouldPrintTitle)
+    songOffset = inEvent.start - song.start
+
+    for event in songEvents:
+        event.start += songOffset
+        event.end += songOffset
+
+        event.start = max(timedelta(0), event.start)
+        event.end = max(timedelta(0), event.end)
+
+    outEvents.extend(songEvents)
+
+    return outEvents
+
+
+def populate_songs(
+    songService: SongService, inEvents: Sequence[pyass.Event], shouldPrintTitle: bool
+) -> Sequence[pyass.Event]:
+    outEvents = []
+
+    actorToStyle = {
+        k: pyass.Tags.parse(v) for k, v in songService.get_format_tags().items()
+    }
+
     for inEvent in inEvents:
         if inEvent.style == SONG_STYLE_NAME:
-            outEvents.append(to_comment(inEvent))
-
-            allModifiers = []
-            for match in re.findall(LYRICS_MODIFIER_TAG_REGEX, inEvent.text):
-                allModifiers.extend(parse_modifiers(match))
-
-            songName = re.sub(TAGS_REGEX, '', inEvent.text)
-            actualSongName = get_full_song_name(spreadsheetId, songName)
-            if actualSongName is not None:
-                
-                songCount += 1
-
-                if songCount % 10 == 0:
-                    print('Pausing to stay within API limits...')
-                    time.sleep(55)
-                    print('Resuming')
-
-                print(f'Populating {actualSongName}')
-
-                actorToStyle = get_format_string_map(spreadsheetId)
-                songEvents = get_song_events(spreadsheetId, actualSongName, actorToStyle, shouldPrintTitle, allModifiers)
-
-                firstLine = songEvents[3]
-                songOffset = inEvent.start - firstLine.start
-
-                for event in songEvents:
-                    event.start += songOffset
-                    event.end += songOffset
-
-                    event.start = max(timedelta(0), event.start)
-                    event.end = max(timedelta(0), event.end)
-
-                outEvents.extend(songEvents)
-            else:
-                print(f'Could not find song {inEvent.text}')
+            outEvents.extend(
+                populate_song(songService, inEvent, actorToStyle, shouldPrintTitle)
+            )
         else:
             outEvents.append(inEvent)
 
     return outEvents
 
-def populate_styles(styles: list[ass.Style]):
-    requiredStyles = {
-        DIVIDER_STYLE_NAME: DIVIDER_STYLE,
-        TITLE_STYLE_NAME: TITLE_STYLE,
-        ROMAJI_STYLE_NAME: ROMAJI_STYLE,
-        EN_STYLE_NAME: EN_STYLE,
-    }
-
-    currStyles = {style.name: style for style in styles}
-    for requiredStyleName, requiredStyle in requiredStyles.items():
-        if requiredStyleName not in currStyles:
-            styles.append(requiredStyle)
-
-    return styles
-
-def remove_old_song_lines(events):
-    return [event for event in events if event.style == SONG_STYLE_NAME or not event.style.startswith(SONG_STYLE_NAME) or TEMPLATE in event.effect or CODE in event.effect]
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Populate lyrics in an .ass file'
+    parser = argparse.ArgumentParser(description="Populate lyrics in an .ass file")
+    parser.add_argument("fname", help="Path to input file")
+    parser.add_argument(
+        "--title",
+        help="Whether to print the title",
+        action=argparse.BooleanOptionalAction,
+        default=True,
     )
-    parser.add_argument('fname', help='Path to input file')
-    parser.add_argument('--title', help='Whether to print the title', action=argparse.BooleanOptionalAction)
+    parser.add_argument("--config", help="Path to config file", default="./config.json")
 
     args = parser.parse_args()
 
-    inputAss = None
-    with open(args.fname, encoding='utf_8_sig') as inputFile:
-        inputAss = ass.parse(inputFile)
+    with open(args.config) as f:
+        config = json.load(f)
+
+    songService = SongServiceByDB(
+        config["google_credentials"],
+        config["spreadsheet_id"],
+        MemoryCache(),
+    )
+
+    with open(args.fname, encoding="utf_8_sig") as inputFile:
+        inputAss = pyass.load(inputFile)
 
         inputAss.styles = populate_styles(inputAss.styles)
 
-        inputAss.events = remove_old_song_lines(inputAss.events)
-        inputAss.events = populate_songs(spreadsheetId, inputAss.events, args.title)
+        inputAss.events = filter_old_song_lines(inputAss.events)
+        inputAss.events = populate_songs(songService, inputAss.events, args.title)
 
-    with open(args.fname, 'w+', encoding='utf_8_sig') as outFile:
-        inputAss.dump_file(outFile)
-    
+        with open(args.fname, "w+", encoding="utf_8_sig") as outFile:
+            pyass.dump(inputAss, outFile)
+
     try:
-        subprocess.run(['aegisub-cli', '--automation', 'kara-templater.lua', args.fname, args.fname, 'Apply karaoke template'])
+        subprocess.run(
+            [
+                "aegisub-cli",
+                "--automation",
+                "kara-templater.lua",
+                args.fname,
+                args.fname,
+                "Apply karaoke template",
+            ]
+        )
     except FileNotFoundError:
         pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
