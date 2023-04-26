@@ -1,4 +1,6 @@
 from collections.abc import Mapping, Sequence
+from enum import Enum
+from typing import Any
 
 from apiclient import discovery
 from google.oauth2 import service_account
@@ -10,6 +12,10 @@ from .limiter import BurstLimiter
 
 class GoogleSheetsClient:
     SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+
+    class ValueInputOption(Enum):
+        RAW = "RAW"
+        USER_ENTERED = "USER_ENTERED"
 
     def __init__(self, googleCredentials: Mapping[str, str]) -> None:
         self.service = discovery.build(
@@ -30,6 +36,27 @@ class GoogleSheetsClient:
     def get(self, spreadsheetId: str, ranges: Sequence[str] = [], fields: str = ""):
         return self.service.get(
             spreadsheetId=spreadsheetId, ranges=ranges, fields=fields
+        ).execute()
+
+    def append_values(
+        self,
+        spreadsheetId: str,
+        range: str = "",
+        values: Sequence[Sequence[str]] = [],
+        valueInputOption: ValueInputOption = ValueInputOption.RAW,
+    ):
+        self.service.values().append(
+            spreadsheetId=spreadsheetId,
+            range=range,
+            body={
+                "values": values,
+            },
+            valueInputOption=valueInputOption.name,
+        ).execute()
+
+    def batch_update(self, spreadsheetId: str, requests: Sequence[Mapping[str, Any]]):
+        self.service.batchUpdate(
+            spreadsheetId=spreadsheetId, body={"requests": requests}
         ).execute()
 
     def get_row(self, cellRef: str) -> int:
@@ -92,3 +119,17 @@ class RateLimitedGoogleSheetsClient(GoogleSheetsClient):
     @token_bucket("read", 1)
     def get(self, spreadsheetId: str, ranges: Sequence[str] = [], fields: str = ""):
         return super().get(spreadsheetId, ranges, fields)
+
+    @token_bucket("write", 1)
+    def append_values(
+        self,
+        spreadsheetId: str,
+        range: str = "",
+        values: Sequence[Sequence[str]] = [],
+        valueInputOption: GoogleSheetsClient.ValueInputOption = GoogleSheetsClient.ValueInputOption.RAW,
+    ):
+        return super().append_values(spreadsheetId, range, values, valueInputOption)
+
+    @token_bucket("write", 1)
+    def batch_update(self, spreadsheetId: str, requests: Sequence[Mapping[str, Any]]):
+        return super().batch_update(spreadsheetId, requests)

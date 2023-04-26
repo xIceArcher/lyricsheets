@@ -1,6 +1,8 @@
 from collections.abc import Mapping, Sequence
 from datetime import timedelta
+import functools
 import itertools
+import operator
 from typing import Optional, Any
 
 from src.cache import Cache, with_cache
@@ -218,3 +220,203 @@ class SongDB:
         cs = int(csStr)
 
         return timedelta(hours=hrs, minutes=mins, seconds=secs, milliseconds=cs * 10)
+
+    def save_song(self, spreadsheetId: str, song: Song):
+        self._create_song(spreadsheetId, song.title)
+
+        self._save_title(spreadsheetId, song.title.romaji, song.title)
+        self._save_creators(spreadsheetId, song.title.romaji, song.creators)
+        self._save_english(spreadsheetId, song.title.romaji, song.lyrics)
+        self._save_is_secondary(spreadsheetId, song.title.romaji, song.lyrics)
+        self._save_line_times(spreadsheetId, song.title.romaji, song.lyrics)
+        self._save_line_karaoke(spreadsheetId, song.title.romaji, song.lyrics)
+        self._save_romaji(spreadsheetId, song.title.romaji, song.lyrics)
+        self._save_line_actors(spreadsheetId, song.title.romaji, song.lyrics)
+
+    def _create_song(self, spreadsheetId: str, songTitle: SongTitle):
+        sheetNameToId = self.songTemplateDB.get_sheet_name_to_id_map(spreadsheetId)
+
+        self.sheetsClient.batch_update(
+            spreadsheetId,
+            [
+                {
+                    "duplicateSheet": {
+                        "sourceSheetId": sheetNameToId[
+                            self.songTemplateDB.TEMPLATE_SHEET_NAME
+                        ],
+                        # Template sheet should be the last sheet
+                        "insertSheetIndex": len(sheetNameToId) - 1,
+                        "newSheetName": songTitle.romaji,
+                    }
+                }
+            ],
+        )
+
+    def _save_title(self, spreadsheetId: str, sheetName: str, songTitle: SongTitle):
+        self.sheetsClient.append_values(
+            spreadsheetId,
+            range=f"{sheetName}!B1",
+            values=[
+                [songTitle.romaji],
+                [songTitle.en if songTitle.en else ""],
+            ],
+        )
+
+    def _save_creators(
+        self, spreadsheetId: str, sheetName: str, songCreators: SongCreators
+    ):
+        if songCreators == SongCreators():
+            return
+
+        self.sheetsClient.append_values(
+            spreadsheetId,
+            range=f"{sheetName}!E1",
+            values=[
+                [songCreators.artist],
+                [", ".join(songCreators.composers)],
+                [", ".join(songCreators.arrangers)],
+                [", ".join(songCreators.writers)],
+            ],
+        )
+
+    def _save_english(
+        self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
+    ):
+        if len([line.en for line in songLines if line.en != ""]) == 0:
+            return
+
+        self.sheetsClient.append_values(
+            spreadsheetId,
+            range=f"{sheetName}!B6",
+            values=[[line.en] for line in songLines],
+        )
+
+    def _save_is_secondary(
+        self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
+    ):
+        if len([line.isSecondary for line in songLines if line.isSecondary]) == 0:
+            return
+
+        self.sheetsClient.append_values(
+            spreadsheetId,
+            range=f"{sheetName}!F6",
+            values=[["U"] if line.isSecondary else [] for line in songLines],
+        )
+
+    def _save_line_times(
+        self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
+    ):
+        if (
+            len(
+                [
+                    (line.start, line.end)
+                    for line in songLines
+                    if line.start != timedelta() and line.end != timedelta
+                ]
+            )
+            == 0
+        ):
+            return
+
+        self.sheetsClient.append_values(
+            spreadsheetId,
+            range=f"{sheetName}!G6",
+            values=[
+                [self._format_timedelta(line.start), self._format_timedelta(line.end)]
+                for line in songLines
+            ],
+        )
+
+    def _save_line_karaoke(
+        self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
+    ):
+        if all([len(line.syllables) == 0 for line in songLines]):
+            return
+
+        self.sheetsClient.append_values(
+            spreadsheetId,
+            range=f"{sheetName}!I6",
+            values=[
+                functools.reduce(
+                    operator.iconcat,
+                    [
+                        [
+                            int(syllable.length.total_seconds() * 100),
+                            syllable.text,
+                        ]
+                        for syllable in line.syllables
+                    ],
+                    [],
+                )
+                for line in songLines
+            ],
+        )
+
+    def _save_line_actors(
+        self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
+    ):
+        if all([len(line.actors) == 0 for line in songLines]):
+            return
+
+        rootPos = "I6"
+
+        sheetId = self.songTemplateDB.get_sheet_name_to_id_map(spreadsheetId)[sheetName]
+        rowOffset = self.sheetsClient.get_row_idx(rootPos)
+        columnOffset = self.sheetsClient.get_column_idx(rootPos)
+
+        formatMap = self.songTemplateDB.get_format_map(spreadsheetId)
+
+        requests = []
+        for lineIdx, line in enumerate(songLines):
+            for i in range(len(line.actors)):
+                actor = line.actors[i]
+                startIdx = line.breakpoints[i]
+                endIdx = (
+                    len(line.syllables)
+                    if i == len(line.actors) - 1
+                    else line.breakpoints[i + 1]
+                )
+
+                req = {
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": sheetId,
+                            "startRowIndex": rowOffset + lineIdx,
+                            "endRowIndex": rowOffset + lineIdx + 1,
+                            "startColumnIndex": columnOffset + startIdx * 2,
+                            "endColumnIndex": columnOffset + endIdx * 2,
+                        },
+                        "cell": {"userEnteredFormat": formatMap[actor]},
+                        "fields": "userEnteredFormat(backgroundColor,textFormat.foregroundColor)",
+                    }
+                }
+
+                requests.append(req)
+
+        self.sheetsClient.batch_update(spreadsheetId, requests=requests)
+
+    def _save_romaji(
+        self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
+    ):
+        rootPos = "E6"
+        r = self.sheetsClient.get_row(rootPos)
+
+        self.sheetsClient.append_values(
+            spreadsheetId,
+            range=f"{sheetName}!{rootPos}",
+            values=[
+                [
+                    f'=CONCATENATE(ARRAYFORMULA(IF(MOD(COLUMN(I{r+i}:{r+i}),2)=MOD(COLUMN(I{r+i}),2), "", I{r+i}:{r+i})))'
+                ]
+                for i in range(len(songLines))
+            ],
+            valueInputOption=GoogleSheetsClient.ValueInputOption.USER_ENTERED,
+        )
+
+    def _format_timedelta(self, td: timedelta) -> str:
+        hours, remainder = td.total_seconds() // 3600, td.total_seconds() % 3600
+        minutes, seconds = remainder // 60, remainder % 60
+
+        return "{:01}:{:02}:{:02}.{:02}".format(
+            int(hours), int(minutes), int(seconds), int(td.microseconds // 10000)
+        )
