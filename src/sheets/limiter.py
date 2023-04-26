@@ -7,7 +7,7 @@ class BurstLimiter:
     def __init__(
         self, rate: float, capacity: float, initialCapacity: float, storage: StorageBase
     ) -> None:
-        self._initialLimiter = Limiter(1e-999, initialCapacity, MemoryStorage())
+        self._initialLimiter = Limiter(1e-99, initialCapacity, MemoryStorage())
         self._constantRateLimiter = Limiter(rate, capacity, storage)
         self._initTime = time()
         self._initialCoolTime = initialCapacity / rate

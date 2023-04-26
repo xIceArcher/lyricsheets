@@ -131,22 +131,28 @@ class SongDB:
 
     def _parse_creators(self, sheetData) -> song.SongCreators:
         col = self.sheetsClient.get_column_idx("E")
+        try:
+            artist = sheetData[0]["values"][col]["formattedValue"].strip()
+        except KeyError:
+            artist = ""
 
         return song.SongCreators(
-            artist=sheetData[0]["values"][col]["formattedValue"],
-            composers=[
-                composer.strip()
-                for composer in sheetData[1]["values"][col]["formattedValue"].split(",")
-            ],
-            arrangers=[
-                composer.strip()
-                for composer in sheetData[2]["values"][col]["formattedValue"].split(",")
-            ],
-            writers=[
-                composer.strip()
-                for composer in sheetData[3]["values"][col]["formattedValue"].split(",")
-            ],
+            artist=artist,
+            composers=self._parse_creator(sheetData, 1, col),
+            arrangers=self._parse_creator(sheetData, 2, col),
+            writers=self._parse_creator(sheetData, 3, col),
         )
+
+    def _parse_creator(self, sheetData, row: int, col: int) -> list[str]:
+        try:
+            return [
+                creator.strip()
+                for creator in sheetData[row]["values"][col]["formattedValue"].split(
+                    ","
+                )
+            ]
+        except (IndexError, KeyError):
+            return []
 
     def _parse_lyrics(self, spreadsheetId: str, sheetData) -> Sequence[song.SongLine]:
         colorToActorMap = {
@@ -189,7 +195,7 @@ class SongDB:
 
             currActor = colorToActorMap[
                 self.sheetsClient.color_to_hex(
-                    val2['userEnteredFormat']["backgroundColor"]
+                    val2["userEnteredFormat"]["backgroundColor"]
                 )
             ]
             if not actors or currActor != actors[-1]:
