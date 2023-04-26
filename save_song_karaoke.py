@@ -1,50 +1,11 @@
 import argparse
-from datetime import timedelta
-import functools
 import json
 import os
 import pyass
 
-from src.models import Song, SongLine, SongLineSyllable, SongTitle
+from src.ass import read_karaoke
+from src.models import Song, SongTitle
 from src.service import SongServiceByDB
-
-
-def read_karaoke(filePath: str) -> list[SongLine]:
-    with open(filePath, encoding="utf_8_sig") as f:
-        rawSong = pyass.load(f)
-        events = [event for event in rawSong.events if event.text != ""]
-
-        ret = []
-        for event in events:
-            syllables: list[SongLineSyllable] = []
-
-            for part in event.parts:
-                karaokeTags = [
-                    tag for tag in part.tags if isinstance(tag, pyass.KaraokeTag)
-                ]
-                if len(karaokeTags) != 1:
-                    continue
-
-                syllables.append(
-                    SongLineSyllable(length=karaokeTags[0].duration, text=part.text)
-                )
-
-            kTimeSum = functools.reduce(
-                lambda a, b: a + b.length, syllables, timedelta()
-            )
-
-            if len(syllables) > 0:
-                syllables[-1].length -= kTimeSum - event.length
-
-            ret.append(
-                SongLine(
-                    syllables=syllables,
-                    start=event.start,
-                    end=event.end,
-                )
-            )
-
-        return ret
 
 
 def main():
@@ -63,10 +24,13 @@ def main():
     with open(args.config) as f:
         config = json.load(f)
 
-    song = Song(
-        title=SongTitle(romaji=args.title),
-        lyrics=read_karaoke(args.input_fname),
-    )
+    with open(args.input_fname, encoding="utf_8_sig") as f:
+        rawFile = pyass.load(f)
+
+        song = Song(
+            title=SongTitle(romaji=args.title),
+            lyrics=read_karaoke(rawFile.events),
+        )
 
     songService = SongServiceByDB(
         config["google_credentials"],
