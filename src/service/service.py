@@ -16,3 +16,7 @@ class SongService:
     @abstractmethod
     def get_format_tags(self, spreadsheetId: str = "") -> Mapping[str, str]:
         ...
+
+    @abstractmethod
+    def save_song(self, song: Song, spreadsheetId: str = ""):
+        ...

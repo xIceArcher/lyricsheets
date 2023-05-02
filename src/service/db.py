@@ -65,3 +65,9 @@ class SongServiceByDB(SongService):
             spreadsheetId = self.defaultSpreadsheetId
 
         return self.service.songTemplateDB.get_format_tags(spreadsheetId)
+
+    def save_song(self, song: Song, spreadsheetId: str = ""):
+        if spreadsheetId == "":
+            spreadsheetId = self.defaultSpreadsheetId
+
+        self.service.save_song(spreadsheetId, song)
