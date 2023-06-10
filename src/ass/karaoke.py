@@ -12,6 +12,14 @@ import pyass
 from pyass import Style
 
 
+class KLine:
+    pass
+
+
+class KSyl:
+    pass
+
+
 @dataclass
 class KChar:
     char: str
@@ -21,6 +29,9 @@ class KChar:
     karaDuration: timedelta()
     i: int
     sylI: int
+
+    line: KLine = None
+    syl: KSyl = None
 
 
 @dataclass
@@ -32,6 +43,8 @@ class KSyl:
     text: str
     inlineFx: str
     i: int
+
+    line: KLine = None
 
 
 @dataclass
@@ -96,6 +109,7 @@ def preproc_line_text(
             inlineFx=actor,
             chars=[],
             i=len(kLine.kara),
+            line=kLine,
         )
 
         syllableCharLengths = [
@@ -116,6 +130,8 @@ def preproc_line_text(
                 i=totalChars,
                 sylI=len(kSyl.chars),
                 fadeOffset=timedelta(),
+                syl=kSyl,
+                line=kLine,
             )
 
             sylAccLength = kChar.karaEnd
@@ -178,22 +194,27 @@ def preproc_line_text_en(
         start=line.start,
         end=line.start,
         duration=timedelta(),
-        chars=[
-            KChar(
-                char=char,
-                fadeOffset=lineCharTime,
-                i=i,
-                karaStart=timedelta(),
-                karaEnd=timedelta(),
-                karaDuration=timedelta(),
-                sylI=i,
-            )
-            for i, (char, lineCharTime) in enumerate(zip(kLineEN.text, lineCharTimes))
-        ],
+        chars=[],
         text=line.en,
         inlineFx=None,
         i=0,
+        line=kLineEN,
     )
+
+    kSylEN.chars = [
+        KChar(
+            char=char,
+            fadeOffset=lineCharTime,
+            i=i,
+            karaStart=timedelta(),
+            karaEnd=timedelta(),
+            karaDuration=timedelta(),
+            sylI=i,
+            syl=kSylEN,
+            line=kLineEN,
+        )
+        for i, (char, lineCharTime) in enumerate(zip(kLineEN.text, lineCharTimes))
+    ]
 
     kLineEN.kara.append(kSylEN)
 

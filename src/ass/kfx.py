@@ -30,7 +30,6 @@ def get_en_pos_tag(line: KLine) -> pyass.Tag:
 
 def get_char_transform_tags(
     kChar: KChar,
-    kLine: KLine,
     switchDuration: timedelta,
     transitionDuration: timedelta,
     startTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0xFF)],
@@ -39,18 +38,13 @@ def get_char_transform_tags(
 ) -> Sequence[pyass.Tag]:
     return [
         *startTag,
-        get_enter_transition_tag(
-            kChar, kLine, switchDuration, transitionDuration, enterTag
-        ),
-        get_exit_transition_tag(
-            kChar, kLine, switchDuration, transitionDuration, exitTag
-        ),
+        get_enter_transition_tag(kChar, switchDuration, transitionDuration, enterTag),
+        get_exit_transition_tag(kChar, switchDuration, transitionDuration, exitTag),
     ]
 
 
 def get_enter_transition_tag(
     kChar: KChar,
-    kLine: KLine,
     switchDuration: timedelta,
     transitionDuration: timedelta,
     resultTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0x00)],
@@ -62,33 +56,37 @@ def get_enter_transition_tag(
 
 def get_exit_transition_tag(
     kChar: KChar,
-    kLine: KLine,
     switchDuration: timedelta,
     transitionDuration: timedelta,
     resultTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0xFF)],
 ) -> pyass.Tag:
     return pyass.TransformTag(
-        start=kLine.duration - transitionDuration + switchDuration + kChar.fadeOffset,
-        end=kLine.duration - transitionDuration + 2 * switchDuration + kChar.fadeOffset,
+        start=kChar.line.duration
+        - transitionDuration
+        + switchDuration
+        + kChar.fadeOffset,
+        end=kChar.line.duration
+        - transitionDuration
+        + 2 * switchDuration
+        + kChar.fadeOffset,
         to=resultTag,
     )
 
 
 def get_char_actor_tag(
     kChar: KChar,
-    kLine: KLine,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
 ) -> Sequence[pyass.Tag]:
-    if len(kLine.actorSwitches) == 0:
+    if len(kChar.line.actorSwitches) == 0:
         return []
-    return [*(actorToStyle[kLine.startActor])] + [
+    return [*(actorToStyle[kChar.line.startActor])] + [
         pyass.TransformTag(
             start=time + kChar.fadeOffset,
             end=time + kChar.fadeOffset,
             to=actorToStyle[actor],
         )
-        for time, actor in kLine.actorSwitches
+        for time, actor in kChar.line.actorSwitches
     ]
 
 
@@ -135,10 +133,8 @@ def to_default_event(
         eventParts.append(
             pyass.EventPart(
                 tags=[
-                    *get_char_transform_tags(
-                        char, line, switchDuration, transitionDuration
-                    ),
-                    *get_char_actor_tag(char, line, actorToStyle, switchDuration),
+                    *get_char_transform_tags(char, switchDuration, transitionDuration),
+                    *get_char_actor_tag(char, actorToStyle, switchDuration),
                     *get_char_karaoke_tag(char),
                 ],
                 text=char.char,
