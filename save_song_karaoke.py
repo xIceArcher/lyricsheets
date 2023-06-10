@@ -14,6 +14,7 @@ def main():
     )
 
     parser.add_argument("input_fname", help="Path to input file")
+    parser.add_argument("group", help="Group that sang the song")
     parser.add_argument("title", help="Title of the song")
     parser.add_argument("--config", help="Path to config file", default="./config.json")
 
@@ -38,7 +39,7 @@ def main():
         config["spreadsheet_id"],
     )
 
-    songService.save_song(song)
+    songService.save_song(song, args.group)
 
 
 if __name__ == "__main__":
