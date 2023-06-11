@@ -10,7 +10,7 @@ from src.models import Song, SongLine, SongTitle
 
 from .consts import *
 from .karaoke import *
-from .kfx import to_default_event
+from .kfx import to_default_event, to_shad_event
 
 
 def to_divider_event(song: Song, dividerText: str) -> pyass.Event:
