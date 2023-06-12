@@ -84,14 +84,22 @@ def to_events(
         to_title_event(song, shouldPrintTitle),
         to_divider_event(song, "Romaji"),
         *[
-            to_romaji_event(
-                line, song.title, actorToStyle, switchDuration, transitionDuration
+            to_default_event(
+                preproc_line_text(line, i + 1),
+                actorToStyle,
+                switchDuration,
+                transitionDuration,
             )
-            for line in song.lyrics
+            for i, line in enumerate(song.lyrics)
         ],
         to_divider_event(song, "English"),
         *[
-            to_en_event(line, actorToStyle, switchDuration, transitionDuration)
-            for line in song.lyrics
+            to_default_event(
+                preproc_line_text_en(line, i + 1),
+                actorToStyle,
+                switchDuration,
+                transitionDuration,
+            )
+            for i, line in enumerate(song.lyrics)
         ],
     ]
