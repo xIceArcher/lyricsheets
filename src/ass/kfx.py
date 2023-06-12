@@ -112,6 +112,11 @@ def to_default_event(
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
+    if line.isEN:
+        line.calculate_char_offsets(EN_STYLE, transitionDuration)
+    else:
+        line.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
+
     # Generate line style tags
     eventParts: list[pyass.EventPart] = [
         pyass.EventPart(
@@ -180,6 +185,7 @@ def to_shad_event(
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
+    line.calculate_char_offsets(ROMAJI_STYLE)
     firstColor = Color.parse("&HBBC9F8&")
     switchColor = Color.parse("&H8A78D7&")
 

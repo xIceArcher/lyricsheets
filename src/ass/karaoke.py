@@ -23,12 +23,12 @@ class KSyl:
 @dataclass
 class KChar:
     char: str
-    fadeOffset: timedelta()
-    karaStart: timedelta()
-    karaEnd: timedelta()
-    karaDuration: timedelta()
     i: int
     sylI: int
+    fadeOffset: timedelta() = timedelta()
+    karaStart: timedelta() = timedelta()
+    karaEnd: timedelta() = timedelta()
+    karaDuration: timedelta() = timedelta()
 
     line: KLine = None
     syl: KSyl = None
@@ -46,6 +46,25 @@ class KSyl:
 
     line: KLine = None
 
+    def calculate_char_kara_times(self, style: Style):
+        fontScaler = FontScaler(style.fontName, style.fontSize)
+
+        syllableCharLengths = [
+            timedelta(milliseconds=c * 10)
+            for c in fontScaler.split_by_rendered_width(
+                pyass.timedelta(self.duration).total_centiseconds(), self.text
+            )
+        ]
+
+        sylAccLength = self.start
+
+        for char, syllableCharLength in zip(self.chars, syllableCharLengths):
+            char.karaStart = sylAccLength
+            char.karaDuration = syllableCharLength
+            char.karaEnd = sylAccLength + syllableCharLength
+
+            sylAccLength += syllableCharLength
+
 
 @dataclass
 class KLine:
@@ -59,15 +78,34 @@ class KLine:
     isSecondary: bool
     isAlone: bool
     isEN: bool
+    lineNum: int
 
     @property
     def chars(self) -> Sequence[KChar]:
         return [char for k in self.kara for char in k.chars]
 
+    def calculate_char_offsets(self, style: Style, transitionDuration: timedelta):
+        self.calculate_char_fade_offsets(style, transitionDuration)
+        for k in self.kara:
+            k.calculate_char_kara_times(style)
 
-def preproc_line_text(
-    line: SongLine, style: Style, transitionDuration: timedelta
-) -> KLine:
+    def calculate_char_fade_offsets(self, style: Style, transitionDuration: timedelta):
+        fontScaler = FontScaler(style.fontName, style.fontSize)
+
+        lineCharTimes = [
+            timedelta(milliseconds=m)
+            for m in fontScaler.split_by_rendered_width(
+                pyass.timedelta(transitionDuration).total_milliseconds(), self.text
+            )
+        ]
+
+        charAccTime = timedelta()
+        for char, lineCharTime in zip(self.chars, lineCharTimes):
+            char.fadeOffset = charAccTime
+            charAccTime += lineCharTime
+
+
+def preproc_line_text(line: SongLine, lineNum: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -87,9 +125,8 @@ def preproc_line_text(
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
         isEN=False,
+        lineNum=lineNum,
     )
-
-    fontScaler = FontScaler(style.fontName, style.fontSize)
 
     accLength = timedelta()
     totalChars = 0
@@ -112,29 +149,15 @@ def preproc_line_text(
             line=kLine,
         )
 
-        syllableCharLengths = [
-            timedelta(milliseconds=c * 10)
-            for c in fontScaler.split_by_rendered_width(
-                pyass.timedelta(syl.length).total_centiseconds(), kSyl.text
-            )
-        ]
-
-        sylAccLength = accLength
-
-        for c, syllableCharLength in zip(syl.text, syllableCharLengths):
+        for c in syl.text:
             kChar = KChar(
                 char=c,
-                karaStart=sylAccLength,
-                karaDuration=syllableCharLength,
-                karaEnd=sylAccLength + syllableCharLength,
                 i=totalChars,
                 sylI=len(kSyl.chars),
-                fadeOffset=timedelta(),
                 syl=kSyl,
                 line=kLine,
             )
 
-            sylAccLength = kChar.karaEnd
             kSyl.chars.append(kChar)
             totalChars += 1
 
@@ -142,24 +165,10 @@ def preproc_line_text(
 
         accLength += syl.length
 
-    lineCharTimes = [
-        timedelta(milliseconds=m)
-        for m in fontScaler.split_by_rendered_width(
-            pyass.timedelta(transitionDuration).total_milliseconds(), kLine.text
-        )
-    ]
-
-    charAccTime = timedelta()
-    for char, lineCharTime in zip(kLine.chars, lineCharTimes):
-        char.fadeOffset = charAccTime
-        charAccTime += lineCharTime
-
     return kLine
 
 
-def preproc_line_text_en(
-    line: SongLine, style: Style, transitionDuration: timedelta
-) -> KLine:
+def preproc_line_text_en(line: SongLine, lineNum: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -178,17 +187,8 @@ def preproc_line_text_en(
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
         isEN=True,
+        lineNum=lineNum,
     )
-
-    fontScaler = FontScaler(style.fontName, style.fontSize)
-    lineCharTimes = [
-        timedelta(milliseconds=m)
-        for m in fontScaler.split_by_rendered_width(
-            pyass.timedelta(transitionDuration).total_milliseconds(), line.en
-        )
-    ]
-
-    lineCharTimes = [timedelta()] + list(accumulate(lineCharTimes))[:-1]
 
     kSylEN = KSyl(
         start=line.start,
@@ -204,7 +204,6 @@ def preproc_line_text_en(
     kSylEN.chars = [
         KChar(
             char=char,
-            fadeOffset=lineCharTime,
             i=i,
             karaStart=timedelta(),
             karaEnd=timedelta(),
@@ -213,7 +212,7 @@ def preproc_line_text_en(
             syl=kSylEN,
             line=kLineEN,
         )
-        for i, (char, lineCharTime) in enumerate(zip(kLineEN.text, lineCharTimes))
+        for i, char, in enumerate(kLineEN.text)
     ]
 
     kLineEN.kara.append(kSylEN)

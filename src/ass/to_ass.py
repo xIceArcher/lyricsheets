@@ -58,7 +58,7 @@ def to_romaji_event(
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
-    kLine = preproc_line_text(line, ROMAJI_STYLE, transitionDuration)
+    kLine = preproc_line_text(line)
     return to_default_event(kLine, actorToStyle, switchDuration, transitionDuration)
 
 
@@ -68,7 +68,7 @@ def to_en_event(
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
-    kLineEN = preproc_line_text_en(line, EN_STYLE, transitionDuration)
+    kLineEN = preproc_line_text_en(line)
     return to_default_event(kLineEN, actorToStyle, switchDuration, transitionDuration)
 
 
