@@ -9,7 +9,7 @@ from src.fonts import FontScaler
 from src.models import Song, SongLine, SongTitle
 
 from .consts import *
-from .karaoke import *
+from ..models.karaoke import *
 from .kfx import to_default_event, to_shad_event
 
 
@@ -49,27 +49,6 @@ def to_title_event(song: Song, shouldPrintTitle: bool) -> pyass.Event:
             pyass.EventPart(tags=TITLE_CARD_TAGS, text=r"\N".join(s)),
         ],
     )
-
-
-def to_romaji_event(
-    line: SongLine,
-    songTitle: SongTitle,
-    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    switchDuration: timedelta,
-    transitionDuration: timedelta,
-) -> pyass.Event:
-    kLine = preproc_line_text(line)
-    return to_default_event(kLine, actorToStyle, switchDuration, transitionDuration)
-
-
-def to_en_event(
-    line: SongLine,
-    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    switchDuration: timedelta,
-    transitionDuration: timedelta,
-) -> pyass.Event:
-    kLineEN = preproc_line_text_en(line)
-    return to_default_event(kLineEN, actorToStyle, switchDuration, transitionDuration)
 
 
 def to_events(

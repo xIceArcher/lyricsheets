@@ -6,7 +6,7 @@ from pyass import Alignment
 import pyass.tag
 
 from .consts import *
-from .karaoke import *
+from ..models.karaoke import *
 
 
 def get_line_format(line: KLine) -> pyass.EventFormat:
