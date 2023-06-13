@@ -28,23 +28,33 @@ class KChar:
     fadeOffset: timedelta() = timedelta()
     karaStart: timedelta() = timedelta()
     karaEnd: timedelta() = timedelta()
-    karaDuration: timedelta() = timedelta()
 
     line: KLine = None
     syl: KSyl = None
+
+    @property
+    def karaDuration(self) -> timedelta:
+        return self.karaEnd - self.karaStart
 
 
 @dataclass
 class KSyl:
     start: timedelta()
     end: timedelta()
-    duration: timedelta()
     chars: Sequence[KChar]
     text: str
     inlineFx: str
     i: int
 
     line: KLine = None
+
+    @property
+    def text(self) -> str:
+        return [char.char for char in self.chars]
+
+    @property
+    def duration(self) -> timedelta:
+        return self.end - self.start
 
     def calculate_char_kara_times(self, style: Style):
         fontScaler = FontScaler(style.fontName, style.fontSize)
@@ -60,7 +70,6 @@ class KSyl:
 
         for char, syllableCharLength in zip(self.chars, syllableCharLengths):
             char.karaStart = sylAccLength
-            char.karaDuration = syllableCharLength
             char.karaEnd = sylAccLength + syllableCharLength
 
             sylAccLength += syllableCharLength
@@ -70,15 +79,21 @@ class KSyl:
 class KLine:
     start: timedelta()
     end: timedelta()
-    duration: timedelta()
     kara: Sequence[KSyl]
-    text: str
     startActor: str
     actorSwitches: Sequence[tuple[int, str]]
     isSecondary: bool
     isAlone: bool
     isEN: bool
     lineNum: int
+
+    @property
+    def text(self) -> str:
+        return [c for text in self.kara for c in text]
+
+    @property
+    def duration(self) -> timedelta:
+        return self.end - self.start
 
     @property
     def chars(self) -> Sequence[KChar]:
@@ -113,9 +128,7 @@ def preproc_line_text(line: SongLine, lineNum: int = 0) -> KLine:
     kLine = KLine(
         start=line.start,
         end=line.end,
-        duration=line.end - line.start,
         kara=[],
-        text=line.romaji,
         startActor=line.actors[0],
         actorSwitches=[
             (timedeltaUpToIdx[breakpoint], actor)
@@ -140,9 +153,7 @@ def preproc_line_text(line: SongLine, lineNum: int = 0) -> KLine:
     for syl, actor in zip(line.syllables, actors):
         kSyl = KSyl(
             start=accLength,
-            duration=syl.length,
             end=accLength + syl.length,
-            text=syl.text,
             inlineFx=actor,
             chars=[],
             i=len(kLine.kara),
@@ -175,9 +186,7 @@ def preproc_line_text_en(line: SongLine, lineNum: int = 0) -> KLine:
     kLineEN = KLine(
         start=line.start,
         end=line.end,
-        duration=line.end - line.start,
         kara=[],
-        text=line.en,
         startActor=line.actors[0],
         actorSwitches=[
             (timedeltaUpToIdx[breakpoint], actor)
@@ -193,9 +202,7 @@ def preproc_line_text_en(line: SongLine, lineNum: int = 0) -> KLine:
     kSylEN = KSyl(
         start=line.start,
         end=line.start,
-        duration=timedelta(),
         chars=[],
-        text=line.en,
         inlineFx=None,
         i=0,
         line=kLineEN,
@@ -207,7 +214,6 @@ def preproc_line_text_en(line: SongLine, lineNum: int = 0) -> KLine:
             i=i,
             karaStart=timedelta(),
             karaEnd=timedelta(),
-            karaDuration=timedelta(),
             sylI=i,
             syl=kSylEN,
             line=kLineEN,
