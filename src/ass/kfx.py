@@ -21,7 +21,7 @@ def get_romaji_pos_tag(line: KLine) -> pyass.Tag:
     if line.isSecondary:
         return SECONDARY_ROMAJI_POS_TAG
     elif line.isAlone:
-        return NO_EN_ROMAJI_POS_TAG
+        return ALONE_ROMAJI_POS_TAG
     else:
         return ROMAJI_POS_TAG
 

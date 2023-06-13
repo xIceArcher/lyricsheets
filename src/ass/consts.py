@@ -72,7 +72,7 @@ LYRICS_TAGS = pyass.Tags(
 )
 
 ROMAJI_POS_TAG = pyass.PositionTag(960, 960)
-NO_EN_ROMAJI_POS_TAG = pyass.PositionTag(960, 1010)
+ALONE_ROMAJI_POS_TAG = pyass.PositionTag(960, 1010)
 SECONDARY_ROMAJI_POS_TAG = pyass.PositionTag(960, 65)
 
 EN_POS_TAG = pyass.PositionTag(960, 1015)
