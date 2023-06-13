@@ -64,7 +64,7 @@ def to_events(
         to_divider_event(song, "Romaji"),
         *[
             to_default_event(
-                preproc_line_text(line, i + 1),
+                to_romaji_k_line(line, i + 1),
                 actorToStyle,
                 switchDuration,
                 transitionDuration,
@@ -74,7 +74,7 @@ def to_events(
         to_divider_event(song, "English"),
         *[
             to_default_event(
-                preproc_line_text_en(line, i + 1),
+                to_en_k_line(line, i + 1),
                 actorToStyle,
                 switchDuration,
                 transitionDuration,

@@ -120,7 +120,7 @@ class KLine:
             charAccTime += lineCharTime
 
 
-def preproc_line_text(line: SongLine, lineNum: int = 0) -> KLine:
+def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -179,7 +179,7 @@ def preproc_line_text(line: SongLine, lineNum: int = 0) -> KLine:
     return kLine
 
 
-def preproc_line_text_en(line: SongLine, lineNum: int = 0) -> KLine:
+def to_en_k_line(line: SongLine, lineNum: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
