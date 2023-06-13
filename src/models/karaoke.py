@@ -42,7 +42,6 @@ class KSyl:
     start: timedelta()
     end: timedelta()
     chars: Sequence[KChar]
-    text: str
     inlineFx: str
     i: int
 
@@ -50,7 +49,7 @@ class KSyl:
 
     @property
     def text(self) -> str:
-        return [char.char for char in self.chars]
+        return ''.join(char.char for char in self.chars)
 
     @property
     def duration(self) -> timedelta:
@@ -89,7 +88,7 @@ class KLine:
 
     @property
     def text(self) -> str:
-        return [c for text in self.kara for c in text]
+        return ''.join(c.char for text in self.kara for c in text.chars)
 
     @property
     def duration(self) -> timedelta:
@@ -218,7 +217,7 @@ def to_en_k_line(line: SongLine, lineNum: int = 0) -> KLine:
             syl=kSylEN,
             line=kLineEN,
         )
-        for i, char, in enumerate(kLineEN.text)
+        for i, char, in enumerate(line.en)
     ]
 
     kLineEN.kara.append(kSylEN)
