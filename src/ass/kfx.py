@@ -82,7 +82,7 @@ def get_char_actor_tag(
 ) -> Sequence[pyass.Tag]:
     if len(kChar.line.actorSwitches) == 0:
         return []
-    return [*(actorToStyle[kChar.line.startActor])] + [
+    return list(actorToStyle[kChar.line.startActor]) + [
         pyass.TransformTag(
             start=time + kChar.fadeOffset,
             end=time + kChar.fadeOffset,
