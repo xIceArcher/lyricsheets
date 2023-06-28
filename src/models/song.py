@@ -59,10 +59,16 @@ class Song(JSONWizard):
 
     @property
     def start(self) -> timedelta:
+        if not self.lyrics:
+            return timedelta()
+
         return self.lyrics[0].start
 
     @property
     def end(self) -> timedelta:
+        if not self.lyrics:
+            return timedelta()
+
         return self.lyrics[-1].end
 
     def modify(self, modifiers: Modifiers):
