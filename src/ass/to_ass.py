@@ -10,7 +10,7 @@ from src.models import Song, SongLine, SongTitle
 
 from .consts import *
 from ..models.karaoke import *
-from .kfx import to_default_event, to_shad_event
+from .kfx import to_default_event, to_shad_event, to_plain_event
 
 
 def to_divider_event(song: Song, dividerText: str) -> pyass.Event:
@@ -63,7 +63,7 @@ def to_events(
         to_title_event(song, shouldPrintTitle),
         to_divider_event(song, "Romaji"),
         *[
-            to_default_event(
+            to_plain_event(
                 to_romaji_k_line(line, i + 1),
                 actorToStyle,
                 switchDuration,
@@ -73,7 +73,7 @@ def to_events(
         ],
         to_divider_event(song, "English"),
         *[
-            to_default_event(
+            to_plain_event(
                 to_en_k_line(line, i + 1),
                 actorToStyle,
                 switchDuration,

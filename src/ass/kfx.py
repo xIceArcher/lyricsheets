@@ -235,3 +235,29 @@ def to_shad_event(
         end=line.end + switchDuration,
         parts=eventParts,
     )
+
+
+def to_plain_event(
+    line: KLine,
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    switchDuration: timedelta,
+    transitionDuration: timedelta,
+) -> pyass.Event:
+    return pyass.Event(
+        format=get_line_format(line),
+        style=EN_STYLE.name if line.isEN else ROMAJI_STYLE.name,
+        start=line.start,
+        end=line.end,
+        parts=[
+            pyass.EventPart(
+                tags=[
+                    pyass.KaraokeTag(syl.duration, False),
+                    pyass.IFXTag(syl.inlineFx)
+                    if syl2 is None or syl.inlineFx != syl2.inlineFx
+                    else pyass.tag.UnknownTag(""),
+                ],
+                text=syl.text,
+            )
+            for syl, syl2 in zip(line.kara, [None] + line.kara[:-1])
+        ],
+    )
