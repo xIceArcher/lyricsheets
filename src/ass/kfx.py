@@ -1,13 +1,88 @@
 from collections.abc import Sequence, Mapping
+from abc import ABC, abstractmethod
 
 from datetime import timedelta
 from pyass import Color
 from pyass import Alignment
 import pyass.tag
 
+from ass.consts import pyass
+from models.karaoke import KLine, Sequence, pyass
+from src.models import Song, SongLine, SongTitle
+
 from .consts import *
 from ..models.karaoke import *
 
+
+class KaraokeEffect(ABC):
+    def __init__(self, shouldPrintTitle = True) -> None:
+        self.shouldPrintTitle = shouldPrintTitle
+        pass
+
+    def to_events(self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]) -> Sequence[pyass.Event]:
+        romajiLines = [to_romaji_k_line(line, i + 1) for i, line in enumerate(song.lyrics)]
+        enLines = [to_en_k_line(line, i + 1) for i, line in enumerate(song.lyrics)]
+
+        return [
+            self.to_divider_event(song, song.title.romaji),
+            self.to_title_event(song, self.shouldPrintTitle),
+            self.to_divider_event(song, "Romaji"),
+            *self.to_romaji_events(romajiLines, actorToStyle),
+            self.to_divider_event(song, "English"),
+            *self.to_en_events(enLines, actorToStyle),
+        ]
+    
+    def to_divider_event(self, song: Song, dividerText: str) -> pyass.Event:
+        return pyass.Event(
+            format=pyass.EventFormat.COMMENT,
+            style=DIVIDER_STYLE.name,
+            end=song.end,
+            text=dividerText,
+        )
+
+
+    def to_title_event(self, song: Song, shouldPrintTitle: bool) -> pyass.Event:
+        s: list[str] = [song.title.romaji]
+
+        if song.title.en:
+            s.append(f"({song.title.en})")
+
+        s.append(song.creators.artist)
+
+        if song.creators.composers:
+            s.append(f"Composed by: {', '.join(song.creators.composers)}")
+
+        if song.creators.arrangers:
+            s.append(f"Arranged by: {', '.join(song.creators.arrangers)}")
+
+        if song.creators.writers:
+            s.append(f"Written by: {', '.join(song.creators.writers)}")
+
+        return pyass.Event(
+            format=pyass.EventFormat.DIALOGUE
+            if shouldPrintTitle
+            else pyass.EventFormat.COMMENT,
+            style=TITLE_STYLE.name,
+            end=TITLE_EVENT_DURATION,
+            parts=[
+                pyass.EventPart(tags=TITLE_CARD_TAGS, text=r"\N".join(s)),
+            ],
+        )
+
+    @abstractmethod
+    def to_romaji_events(self, songLines: Sequence[KLine], actorToStyle: Mapping[str, Sequence[pyass.Tag]]) -> Sequence[pyass.Event]:
+        ...
+    
+    @abstractmethod
+    def to_en_events(self, songLines: Sequence[KLine], actorToStyle: Mapping[str, Sequence[pyass.Tag]]) -> Sequence[pyass.Event]:
+        ...
+
+class DefaultLiveKaraokeEffect(KaraokeEffect):
+    def to_romaji_events(self, songLines: Sequence[KLine], actorToStyle: Mapping[str, Sequence[pyass.Tag]]) -> Sequence[pyass.Event]:
+        return [to_default_event(line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION) for line in songLines]
+
+    def to_en_events(self, songLines: Sequence[KLine], actorToStyle: Mapping[str, Sequence[pyass.Tag]]) -> Sequence[pyass.Event]:
+        return [to_default_event(line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION) for line in songLines]
 
 def get_line_format(line: KLine) -> pyass.EventFormat:
     return (
