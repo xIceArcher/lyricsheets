@@ -35,6 +35,7 @@ class LineModifier:
 
     newOrder: Optional[list[int]] = None
 
+    retimeScaleFactor: float = 1
 
 @dataclass
 class Modifier:
@@ -158,5 +159,14 @@ class Modifiers(list[Modifier]):
                 ret[0].artist = ", ".join([s.strip() for s in modifier.rest])
             elif modifier.operation == "reorder":
                 ret[0].newOrder = [int(s) - 1 for s in modifier.rest]
+            elif modifier.operation == "retime":
+                originalBPM = int(modifier.rest[0])
+                newBPM = int(modifier.rest[1])
+
+                for i in range(
+                    modifier.start,
+                    modifier.end if modifier.end is not None else maxLines,
+                ):
+                    ret[i].retimeScaleFactor = originalBPM / newBPM 
 
         return ret
