@@ -2,12 +2,12 @@ import argparse
 from collections.abc import Mapping, Sequence
 from datetime import timedelta
 import functools
+import importlib
 import json
 import pyass
 import subprocess
 
-from src.ass import REQUIRED_STYLES
-from src.ass.kfx import DefaultLiveKaraokeEffect
+from src.ass import REQUIRED_STYLES, effects
 from src.cache import MemoryCache
 from src.service import SongService, SongServiceByDB
 from src.models import Modifiers
@@ -66,8 +66,11 @@ def populate_song(
 
     song = songService.get_song(songName).modify(Modifiers(allModifiers))
 
-    kfx = DefaultLiveKaraokeEffect(shouldPrintTitle)
-    songEvents = kfx.to_events(song, actorToStyle)
+    spec = importlib.util.find_spec('src.ass.kfx')
+    lib = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(lib)
+
+    songEvents = effects['default_live_karaoke_effect'].to_events(song, actorToStyle)
     songOffset = inEvent.start - song.start
 
     for event in songEvents:

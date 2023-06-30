@@ -10,6 +10,7 @@ from .consts import *
 from ..models.karaoke import *
 
 
+
 class Effect(ABC):
     @abstractmethod
     def to_events(
@@ -156,3 +157,6 @@ class KaraokeEffect(LyricsEffect):
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         ...
+
+
+effects: dict[str, Effect] = {}

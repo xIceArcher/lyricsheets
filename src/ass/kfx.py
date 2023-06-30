@@ -6,7 +6,7 @@ from pyass import Alignment
 import pyass.tag
 
 from .consts import *
-from .to_ass import KaraokeEffect
+from .to_ass import effects, KaraokeEffect
 from ..models.karaoke import *
 
 
@@ -250,3 +250,6 @@ def to_shad_event(
         end=line.end + switchDuration,
         parts=eventParts,
     )
+
+effects['default_live_karaoke_effect'] = DefaultLiveKaraokeEffect()
+effects['shadow_karaoke_effect'] = ShadowKaraokeEffect()
