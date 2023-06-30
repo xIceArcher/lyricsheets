@@ -6,7 +6,8 @@ import json
 import pyass
 import subprocess
 
-from src.ass import REQUIRED_STYLES, to_events
+from src.ass import REQUIRED_STYLES
+from src.ass.kfx import DefaultLiveKaraokeEffect
 from src.cache import MemoryCache
 from src.service import SongService, SongServiceByDB
 from src.models import Modifiers
@@ -65,8 +66,8 @@ def populate_song(
 
     song = songService.get_song(songName).modify(Modifiers(allModifiers))
 
-
-    songEvents = to_events(song, actorToStyle, shouldPrintTitle)
+    kfx = DefaultLiveKaraokeEffect(shouldPrintTitle)
+    songEvents = kfx.to_events(song, actorToStyle)
     songOffset = inEvent.start - song.start
 
     for event in songEvents:

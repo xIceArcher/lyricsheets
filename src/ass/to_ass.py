@@ -3,15 +3,11 @@ from datetime import timedelta
 from abc import ABC, abstractmethod
 
 import pyass
-from ass.consts import pyass
-from models import Song
-from models.karaoke import Sequence, pyass
 
-from src.models import Song, SongLine, SongTitle
+from src.models import Song, SongLine
 
 from .consts import *
 from ..models.karaoke import *
-from .kfx import DefaultLiveKaraokeEffect
 
 
 class Effect(ABC):
@@ -135,7 +131,7 @@ class KaraokeEffect(LyricsEffect):
         romajiLines = [
             to_romaji_k_line(line, i + 1) for i, line in enumerate(songLines)
         ]
-        self.to_romaji_k_events(romajiLines, actorToStyle)
+        return self.to_romaji_k_events(romajiLines, actorToStyle)
 
     def to_en_events(
         self,
@@ -143,7 +139,7 @@ class KaraokeEffect(LyricsEffect):
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         enLines = [to_en_k_line(line, i + 1) for i, line in enumerate(songLines)]
-        self.to_romaji_k_events(enLines, actorToStyle)
+        return self.to_romaji_k_events(enLines, actorToStyle)
 
     @abstractmethod
     def to_romaji_k_events(
@@ -160,12 +156,3 @@ class KaraokeEffect(LyricsEffect):
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         ...
-
-
-def to_events(
-    song: Song,
-    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    shouldPrintTitle: bool = True
-) -> Sequence[pyass.Event]:
-    kfx = DefaultLiveKaraokeEffect(shouldPrintTitle)
-    return kfx.to_events(song, actorToStyle)

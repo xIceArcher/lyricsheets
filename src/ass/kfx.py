@@ -1,14 +1,9 @@
 from collections.abc import Sequence, Mapping
-from abc import ABC, abstractmethod
 
 from datetime import timedelta
 from pyass import Color
 from pyass import Alignment
 import pyass.tag
-
-from ass.consts import pyass
-from models.karaoke import KLine, Sequence, pyass
-from src.models import Song, SongLine, SongTitle
 
 from .consts import *
 from .to_ass import KaraokeEffect
