@@ -27,6 +27,10 @@ ROMAJI_STYLE = pyass.Style(
     name="Song - JP",
     fontName="Proxima Nova",
     fontSize=58,
+    primaryColor=pyass.Color(r=0xFF, g=0xFF, b=0xFF),
+    secondaryColor=pyass.Color(a=0x00),
+    outlineColor=pyass.Color(r=0xA5, g=0x46, b=0x9B),
+    backColor=pyass.Color(r=0x72, g=0x30, b=0x6B),
     isBold=True,
     outline=1.5,
     shadow=1.0,
@@ -39,6 +43,9 @@ EN_STYLE = pyass.Style(
     name="Song - EN",
     fontName="Avenir Next Rounded Pro",
     fontSize=40,
+    primaryColor=pyass.Color(r=0xFF, g=0xFF, b=0xFF),
+    outlineColor=pyass.Color(r=0xA5, g=0x46, b=0x9B),
+    backColor=pyass.Color(r=0x72, g=0x30, b=0x6B),
     isBold=True,
     outline=1.5,
     shadow=1.0,
@@ -72,7 +79,7 @@ LYRICS_TAGS = pyass.Tags(
 )
 
 ROMAJI_POS_TAG = pyass.PositionTag(960, 960)
-NO_EN_ROMAJI_POS_TAG = pyass.PositionTag(960, 1010)
+ALONE_ROMAJI_POS_TAG = pyass.PositionTag(960, 1010)
 SECONDARY_ROMAJI_POS_TAG = pyass.PositionTag(960, 65)
 
 EN_POS_TAG = pyass.PositionTag(960, 1015)

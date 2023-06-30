@@ -59,10 +59,16 @@ class Song(JSONWizard):
 
     @property
     def start(self) -> timedelta:
+        if not self.lyrics:
+            return timedelta()
+
         return self.lyrics[0].start
 
     @property
     def end(self) -> timedelta:
+        if not self.lyrics:
+            return timedelta()
+
         return self.lyrics[-1].end
 
     def modify(self, modifiers: Modifiers):
@@ -78,6 +84,11 @@ class Song(JSONWizard):
                 for syllable, newTime in zip(line.syllables, modifier.syllableLengths):
                     syllable.length = newTime
             else:
+                line.start *= modifier.retimeScaleFactor
+                line.end *= modifier.retimeScaleFactor
+                for syllable in line.syllables:
+                    syllable.length *= modifier.retimeScaleFactor
+
                 line.start += modifier.offset
                 line.end += modifier.offset - modifier.trim
                 line.syllables[-1].length -= modifier.trim
