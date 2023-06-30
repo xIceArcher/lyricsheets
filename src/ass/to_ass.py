@@ -165,9 +165,7 @@ class KaraokeEffect(LyricsEffect):
 def to_events(
     song: Song,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    shouldPrintTitle: bool = True,
-    switchDuration: timedelta = DEFAULT_SWITCH_DURATION,
-    transitionDuration: timedelta = DEFAULT_TRANSITION_DURATION,
+    shouldPrintTitle: bool = True
 ) -> Sequence[pyass.Event]:
     kfx = DefaultLiveKaraokeEffect(shouldPrintTitle)
     return kfx.to_events(song, actorToStyle)
