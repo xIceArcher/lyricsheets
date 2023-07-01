@@ -4,8 +4,10 @@ from datetime import timedelta
 import functools
 import importlib
 import json
+import os
 import pyass
 import subprocess
+import sys
 
 from src.ass import REQUIRED_STYLES, effects
 from src.cache import MemoryCache
@@ -66,11 +68,16 @@ def populate_song(
 
     song = songService.get_song(songName).modify(Modifiers(allModifiers))
 
-    spec = importlib.util.find_spec('src.ass.kfx')
-    lib = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(lib)
-
-    songEvents = effects['default_live_karaoke_effect'].to_events(song, actorToStyle)
+    effectName = "default_live_karaoke_effect"
+    for modifier in allModifiers:
+        if modifier.operation == "import":
+            spec = importlib.util.find_spec(modifier.rest[0])
+            lib = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(lib)
+        elif modifier.operation == "kfx":
+            effectName = modifier.rest[0]
+        
+    songEvents = effects[effectName].to_events(song, actorToStyle)
     songOffset = inEvent.start - song.start
 
     for event in songEvents:
@@ -126,6 +133,8 @@ def main():
         config["spreadsheet_id"],
         MemoryCache(),
     )
+
+    sys.path.append(os.path.dirname(args.fname))
 
     with open(args.fname, encoding="utf_8_sig") as inputFile:
         inputAss = pyass.load(inputFile)
