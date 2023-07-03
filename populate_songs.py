@@ -9,10 +9,12 @@ import pyass
 import subprocess
 import sys
 
-from src.ass import REQUIRED_STYLES, effects
+from src.ass import REQUIRED_STYLES, retrieve_effect
 from src.cache import MemoryCache
 from src.service import SongService, SongServiceByDB
 from src.models import Modifiers
+
+import src.effect
 
 SONG_STYLE_NAME = "Song"
 
@@ -77,7 +79,7 @@ def populate_song(
         elif modifier.operation == "kfx":
             effectName = modifier.rest[0]
         
-    songEvents = effects[effectName].to_events(song, actorToStyle)
+    songEvents = retrieve_effect(effectName).to_events(song, actorToStyle)
     songOffset = inEvent.start - song.start
 
     for event in songEvents:

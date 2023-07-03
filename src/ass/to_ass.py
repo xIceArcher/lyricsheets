@@ -18,13 +18,6 @@ class Effect(ABC):
         ...
 
 
-class NoLyricsEffect(Effect):
-    def to_events(
-        self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
-    ) -> Sequence[pyass.Event]:
-        return []
-
-
 class LyricsEffect(Effect):
     def __init__(
         self,
@@ -103,23 +96,6 @@ class LyricsEffect(Effect):
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         ...
-
-
-# WIP
-class NoKaraokeEffect(LyricsEffect):
-    def to_romaji_events(
-        self,
-        songLines: Sequence[SongLine],
-        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        return []
-
-    def to_en_events(
-        self,
-        songLines: Sequence[SongLine],
-        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        return []
 
 
 class KaraokeEffect(LyricsEffect):
@@ -255,87 +231,12 @@ def get_char_karaoke_tag(
         ]
 
 
-def to_default_event(
-    line: KLine,
-    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    switchDuration: timedelta,
-    transitionDuration: timedelta,
-) -> pyass.Event:
-    if line.isEN:
-        line.calculate_char_offsets(EN_STYLE, transitionDuration)
-    else:
-        line.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
-
-    # Generate line style tags
-    eventParts: list[pyass.EventPart] = [
-        pyass.EventPart(
-            tags=[
-                *LYRICS_TAGS,
-                get_en_pos_tag(line) if line.isEN else get_romaji_pos_tag(line),
-            ],
-        )
-    ]
-
-    # Set color if there's a constant actor
-    if len(line.actorSwitches) == 0:
-        eventParts.append(pyass.EventPart(tags=actorToStyle[line.startActor]))
-
-    # Leading switch duration
-    if not line.isEN:
-        eventParts.append(pyass.EventPart(tags=[pyass.KaraokeTag(switchDuration)]))
-
-    # Generate character style tags
-    for char in line.chars:
-        eventParts.append(
-            pyass.EventPart(
-                tags=[
-                    *get_char_transform_tags(char, switchDuration, transitionDuration),
-                    *get_char_actor_tag(char, actorToStyle, switchDuration),
-                    *get_char_karaoke_tag(char),
-                ],
-                text=char.char,
-            )
-        )
-
-    # Trailing switch duration
-    if not line.isEN:
-        eventParts.append(pyass.EventPart(tags=[pyass.KaraokeTag(switchDuration)]))
-
-    return pyass.Event(
-        format=get_line_format(line),
-        style=EN_STYLE.name if line.isEN else ROMAJI_STYLE.name,
-        start=line.start - switchDuration,
-        end=line.end + switchDuration,
-        parts=eventParts,
-    )
+_effects: dict[str, Effect] = {}
 
 
-class DefaultLiveKaraokeEffect(KaraokeEffect):
-    def to_romaji_k_events(
-        self,
-        songLines: Sequence[KLine],
-        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        return [
-            to_default_event(
-                line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION
-            )
-            for line in songLines
-        ]
-
-    def to_en_k_events(
-        self,
-        songLines: Sequence[KLine],
-        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        return [
-            to_default_event(
-                line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION
-            )
-            for line in songLines
-        ]
+def register_effect(name: str, effect: Effect):
+    _effects[name] = effect
 
 
-effects: dict[str, Effect] = {}
-
-effects["default_live_karaoke_effect"] = DefaultLiveKaraokeEffect()
+def retrieve_effect(name: str):
+    return _effects.get(name)

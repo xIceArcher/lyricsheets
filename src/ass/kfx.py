@@ -112,4 +112,3 @@ def to_shad_event(
     )
 
 
-effects["shadow_karaoke_effect"] = ShadowKaraokeEffect()
