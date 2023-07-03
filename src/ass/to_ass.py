@@ -8,10 +8,6 @@ from src.models import Song, SongLine
 
 from .consts import *
 from ..models.karaoke import *
-<<<<<<< HEAD
-=======
-from .kfx import to_default_event, to_shad_event, to_plain_event
->>>>>>> plain
 
 
 class Effect(ABC):
@@ -168,34 +164,9 @@ def get_char_transform_tags(
     exitTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0xFF)],
 ) -> Sequence[pyass.Tag]:
     return [
-<<<<<<< HEAD
         *startTag,
         get_enter_transition_tag(kChar, switchDuration, transitionDuration, enterTag),
         get_exit_transition_tag(kChar, switchDuration, transitionDuration, exitTag),
-=======
-        to_divider_event(song, song.title.romaji),
-        to_title_event(song, shouldPrintTitle),
-        to_divider_event(song, "Romaji"),
-        *[
-            to_plain_event(
-                to_romaji_k_line(line, i + 1),
-                actorToStyle,
-                switchDuration,
-                transitionDuration,
-            )
-            for i, line in enumerate(song.lyrics)
-        ],
-        to_divider_event(song, "English"),
-        *[
-            to_plain_event(
-                to_en_k_line(line, i + 1),
-                actorToStyle,
-                switchDuration,
-                transitionDuration,
-            )
-            for i, line in enumerate(song.lyrics)
-        ],
->>>>>>> plain
     ]
 
 

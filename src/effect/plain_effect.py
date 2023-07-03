@@ -1,14 +1,6 @@
 from collections.abc import Sequence, Mapping
-from datetime import timedelta
 
-import pyass
-
-from ass.consts import pyass
-from models.karaoke import KLine, Sequence, pyass
-
-from ..ass.consts import *
 from ..ass.to_ass import *
-from ..models.karaoke import *
 
 
 def to_plain_event(line: KLine) -> pyass.Event:

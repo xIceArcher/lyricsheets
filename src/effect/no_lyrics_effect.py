@@ -1,10 +1,6 @@
 from collections.abc import Sequence, Mapping
 
-import pyass
-
-from ..ass.consts import *
 from ..ass.to_ass import *
-from ..models.karaoke import *
 
 
 class NoLyricsEffect(Effect):

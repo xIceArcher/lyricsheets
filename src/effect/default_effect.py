@@ -1,11 +1,7 @@
 from collections.abc import Sequence, Mapping
 from datetime import timedelta
 
-import pyass
-
-from ..ass.consts import *
 from ..ass.to_ass import *
-from ..models.karaoke import *
 
 
 def to_default_event(
