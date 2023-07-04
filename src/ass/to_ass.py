@@ -24,13 +24,13 @@ class LyricsEffect(Effect):
         shouldPrintTitle: bool = True,
         dividerStyle: pyass.Style = DIVIDER_STYLE,
         titleStyle: pyass.Style = TITLE_STYLE,
-        end: timedelta = TITLE_EVENT_DURATION,
+        titleEventDuration: timedelta = TITLE_EVENT_DURATION,
         titleCardTags: pyass.Tags = TITLE_CARD_TAGS,
     ) -> None:
         self.shouldPrintTitle = shouldPrintTitle
         self.dividerStyle = dividerStyle
         self.titleStyle = titleStyle
-        self.end = end
+        self.titleEventDuration = titleEventDuration
         self.titleCardTags = titleCardTags
 
     def to_events(
@@ -75,7 +75,7 @@ class LyricsEffect(Effect):
             if shouldPrintTitle
             else pyass.EventFormat.COMMENT,
             style=self.titleStyle.name,
-            end=self.end,
+            end=self.titleEventDuration,
             parts=[
                 pyass.EventPart(tags=self.titleCardTags, text=r"\N".join(s)),
             ],
