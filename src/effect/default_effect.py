@@ -4,6 +4,19 @@ from datetime import timedelta
 from ..ass.to_ass import *
 
 
+def get_romaji_pos_tag(line: KLine) -> pyass.Tag:
+    if line.isSecondary:
+        return SECONDARY_ROMAJI_POS_TAG
+    elif line.isAlone:
+        return ALONE_ROMAJI_POS_TAG
+    else:
+        return ROMAJI_POS_TAG
+
+
+def get_en_pos_tag(line: KLine) -> pyass.Tag:
+    return SECONDARY_EN_POS_TAG if line.isSecondary else EN_POS_TAG
+
+
 def get_char_transform_tags(
     kChar: KChar,
     switchDuration: timedelta,
