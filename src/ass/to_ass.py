@@ -155,8 +155,6 @@ def get_en_pos_tag(line: KLine) -> pyass.Tag:
     return SECONDARY_EN_POS_TAG if line.isSecondary else EN_POS_TAG
 
 
-
-
 _effects: dict[str, Effect] = {}
 
 
