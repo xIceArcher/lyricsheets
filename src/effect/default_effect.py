@@ -1,20 +1,19 @@
 from collections.abc import Sequence, Mapping
-
 from datetime import timedelta
-from pyass import Color
-from pyass import Alignment
-import pyass.tag
 
-from .consts import *
-from ..models.karaoke import *
+from ..ass.to_ass import *
 
+# Positions
+ROMAJI_POS_TAG = pyass.PositionTag(960, 960)
+ALONE_ROMAJI_POS_TAG = pyass.PositionTag(960, 1010)
+SECONDARY_ROMAJI_POS_TAG = pyass.PositionTag(960, 65)
 
-def get_line_format(line: KLine) -> pyass.EventFormat:
-    return (
-        pyass.EventFormat.COMMENT
-        if line.isAlone and line.isEN
-        else pyass.EventFormat.DIALOGUE
-    )
+EN_POS_TAG = pyass.PositionTag(960, 1015)
+SECONDARY_EN_POS_TAG = pyass.PositionTag(960, 120)
+
+# Timings
+DEFAULT_SWITCH_DURATION = timedelta(milliseconds=200)
+DEFAULT_TRANSITION_DURATION = timedelta(milliseconds=500)
 
 
 def get_romaji_pos_tag(line: KLine) -> pyass.Tag:
@@ -161,77 +160,30 @@ def to_default_event(
     )
 
 
-def get_char_syl_karaoke_tag(
-    kChar: KChar, switchDuration: timedelta, resultTag: Sequence[pyass.Tag] = []
-) -> Sequence[pyass.Tag]:
-    if kChar.karaDuration == timedelta():
-        return []
-    # Karaoke timing
-    if len(resultTag) == 0:
-        return [pyass.KaraokeTag(kChar.karaDuration)]
-    else:
+class DefaultLiveKaraokeEffect(KaraokeEffect):
+    def to_romaji_k_events(
+        self,
+        songLines: Sequence[KLine],
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> Sequence[pyass.Event]:
         return [
-            pyass.TransformTag(
-                start=kChar.syl.start + switchDuration,
-                end=kChar.syl.end + switchDuration,
-                to=resultTag,
+            to_default_event(
+                line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION
             )
+            for line in songLines
+        ]
+
+    def to_en_k_events(
+        self,
+        songLines: Sequence[KLine],
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> Sequence[pyass.Event]:
+        return [
+            to_default_event(
+                line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION
+            )
+            for line in songLines
         ]
 
 
-def to_shad_event(
-    line: KLine,
-    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    switchDuration: timedelta,
-    transitionDuration: timedelta,
-) -> pyass.Event:
-    line.calculate_char_offsets(ROMAJI_STYLE)
-    firstColor = Color.parse("&HBBC9F8&")
-    switchColor = Color.parse("&H8A78D7&")
-
-    # Generate line style tags
-    eventParts: list[pyass.EventPart] = [
-        pyass.EventPart(
-            tags=[
-                pyass.BlurEdgesTag(1),
-                pyass.AlignmentTag(Alignment.TOP_LEFT)
-                if line.isSecondary
-                else pyass.AlignmentTag(Alignment.TOP_RIGHT),
-                pyass.PositionTag(30, 30)
-                if line.isSecondary and not line.isEN
-                else pyass.PositionTag(30, 100)
-                if line.isSecondary and line.isEN
-                else pyass.PositionTag(1890, 30)
-                if not line.isSecondary and not line.isEN
-                else pyass.PositionTag(1890, 100),
-            ],
-        )
-    ]
-
-    # Generate character style tags
-    for char in line.chars:
-        eventParts.append(
-            pyass.EventPart(
-                tags=[
-                    *get_char_transform_tags(char, switchDuration, transitionDuration),
-                    pyass.ShadowDepthTag(0),
-                    pyass.ColorTag(firstColor)
-                    if not line.isEN
-                    else pyass.tag.UnknownTag(""),
-                    *get_char_syl_karaoke_tag(
-                        char,
-                        switchDuration,
-                        [pyass.ShadowDepthTag(9), pyass.ColorTag(switchColor)],
-                    ),
-                ],
-                text=char.char,
-            )
-        )
-
-    return pyass.Event(
-        format=get_line_format(line),
-        style=EN_STYLE.name if line.isEN else ROMAJI_STYLE.name,
-        start=line.start - switchDuration,
-        end=line.end + switchDuration,
-        parts=eventParts,
-    )
+register_effect("default_live_karaoke_effect", DefaultLiveKaraokeEffect())

@@ -78,17 +78,3 @@ LYRICS_TAGS = pyass.Tags(
     ]
 )
 
-ROMAJI_POS_TAG = pyass.PositionTag(960, 960)
-ALONE_ROMAJI_POS_TAG = pyass.PositionTag(960, 1010)
-SECONDARY_ROMAJI_POS_TAG = pyass.PositionTag(960, 65)
-
-EN_POS_TAG = pyass.PositionTag(960, 1015)
-SECONDARY_EN_POS_TAG = pyass.PositionTag(960, 120)
-
-# Effects
-KARAOKE_EFFECT = "karaoke"
-
-# Timings
-TITLE_EVENT_DURATION = timedelta(seconds=5)
-DEFAULT_SWITCH_DURATION = timedelta(milliseconds=200)
-DEFAULT_TRANSITION_DURATION = timedelta(milliseconds=500)
