@@ -3,6 +3,18 @@ from datetime import timedelta
 
 from ..ass.to_ass import *
 
+# Positions
+ROMAJI_POS_TAG = pyass.PositionTag(960, 960)
+ALONE_ROMAJI_POS_TAG = pyass.PositionTag(960, 1010)
+SECONDARY_ROMAJI_POS_TAG = pyass.PositionTag(960, 65)
+
+EN_POS_TAG = pyass.PositionTag(960, 1015)
+SECONDARY_EN_POS_TAG = pyass.PositionTag(960, 120)
+
+# Timings
+DEFAULT_SWITCH_DURATION = timedelta(milliseconds=200)
+DEFAULT_TRANSITION_DURATION = timedelta(milliseconds=500)
+
 
 def get_romaji_pos_tag(line: KLine) -> pyass.Tag:
     if line.isSecondary:

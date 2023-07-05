@@ -10,6 +10,10 @@ from .consts import *
 from ..models.karaoke import *
 
 
+# Timings
+TITLE_EVENT_DURATION = timedelta(seconds=5)
+
+
 class Effect(ABC):
     @abstractmethod
     def to_events(
