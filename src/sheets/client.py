@@ -1,9 +1,12 @@
 from collections.abc import Mapping, Sequence
 from enum import Enum
+from http import HTTPStatus
 from typing import Any
 
 from apiclient import discovery
+from backoff import on_exception, expo
 from google.oauth2 import service_account
+from googleapiclient.errors import HttpError
 from token_bucket import MemoryStorage
 
 from .decorator import token_bucket
@@ -26,6 +29,13 @@ class GoogleSheetsClient:
             ),
         ).spreadsheets()
 
+    @on_exception(
+        expo,
+        HttpError,
+        giveup=lambda e: not isinstance(e, HttpError)
+        or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
+        max_tries=10,
+    )
     def get_values(self, spreadsheetId: str, range: str = ""):
         return (
             self.service.values()
@@ -33,11 +43,25 @@ class GoogleSheetsClient:
             .execute()["values"]
         )
 
+    @on_exception(
+        expo,
+        HttpError,
+        giveup=lambda e: not isinstance(e, HttpError)
+        or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
+        max_tries=10,
+    )
     def get(self, spreadsheetId: str, ranges: Sequence[str] = [], fields: str = ""):
         return self.service.get(
             spreadsheetId=spreadsheetId, ranges=ranges, fields=fields
         ).execute()
 
+    @on_exception(
+        expo,
+        HttpError,
+        giveup=lambda e: not isinstance(e, HttpError)
+        or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
+        max_tries=10,
+    )
     def append_values(
         self,
         spreadsheetId: str,
@@ -54,6 +78,13 @@ class GoogleSheetsClient:
             valueInputOption=valueInputOption.name,
         ).execute()
 
+    @on_exception(
+        expo,
+        HttpError,
+        giveup=lambda e: not isinstance(e, HttpError)
+        or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
+        max_tries=10,
+    )
     def batch_update(self, spreadsheetId: str, requests: Sequence[Mapping[str, Any]]):
         self.service.batchUpdate(
             spreadsheetId=spreadsheetId, body={"requests": requests}
