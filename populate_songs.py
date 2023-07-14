@@ -2,14 +2,19 @@ import argparse
 from collections.abc import Mapping, Sequence
 from datetime import timedelta
 import functools
+import importlib
 import json
+import os
 import pyass
 import subprocess
+import sys
 
-from src.ass import REQUIRED_STYLES, to_events
+from src.ass import REQUIRED_STYLES, retrieve_effect
 from src.cache import MemoryCache
 from src.service import SongService, SongServiceByDB
 from src.models import Modifiers
+
+import src.effect
 
 SONG_STYLE_NAME = "Song"
 
@@ -65,8 +70,16 @@ def populate_song(
 
     song = songService.get_song(songName).modify(Modifiers(allModifiers))
 
-
-    songEvents = to_events(song, actorToStyle, shouldPrintTitle)
+    effectName = "default_live_karaoke_effect"
+    for modifier in allModifiers:
+        if modifier.operation == "import":
+            spec = importlib.util.find_spec(modifier.rest[0])
+            lib = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(lib)
+        elif modifier.operation == "kfx":
+            effectName = modifier.rest[0]
+        
+    songEvents = retrieve_effect(effectName).to_events(song, actorToStyle)
     songOffset = inEvent.start - song.start
 
     for event in songEvents:
@@ -123,6 +136,8 @@ def main():
         config["spreadsheet_id"],
         MemoryCache(),
     )
+
+    sys.path.append(os.path.dirname(args.fname))
 
     with open(args.fname, encoding="utf_8_sig") as inputFile:
         inputAss = pyass.load(inputFile)
