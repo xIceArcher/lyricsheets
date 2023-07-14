@@ -78,7 +78,7 @@ def populate_song(
             spec.loader.exec_module(lib)
         elif modifier.operation == "kfx":
             effectName = modifier.rest[0]
-        
+
     songEvents = retrieve_effect(effectName).to_events(song, actorToStyle)
     songOffset = inEvent.start - song.start
 
@@ -95,13 +95,12 @@ def populate_song(
 
 
 def populate_songs(
-    songService: SongService, inEvents: Sequence[pyass.Event], shouldPrintTitle: bool
+    songService: SongService,
+    inEvents: Sequence[pyass.Event],
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    shouldPrintTitle: bool,
 ) -> Sequence[pyass.Event]:
     outEvents = []
-
-    actorToStyle = {
-        k: pyass.Tags.parse(v) for k, v in songService.get_format_tags().items()
-    }
 
     for inEvent in inEvents:
         if inEvent.style == SONG_STYLE_NAME:
@@ -116,7 +115,7 @@ def populate_songs(
 
 def main():
     parser = argparse.ArgumentParser(description="Populate lyrics in an .ass file")
-    parser.add_argument("fname", help="Path to input file")
+    parser.add_argument("--fname", help="Path to input file(s)", nargs="+")
     parser.add_argument(
         "--title",
         help="Whether to print the title",
@@ -137,32 +136,38 @@ def main():
         MemoryCache(),
     )
 
-    sys.path.append(os.path.dirname(args.fname))
+    actorToStyle = {
+        k: pyass.Tags.parse(v) for k, v in songService.get_all_format_tags().items()
+    }
 
-    with open(args.fname, encoding="utf_8_sig") as inputFile:
-        inputAss = pyass.load(inputFile)
+    for file in args.fname:
+        sys.path.append(os.path.dirname(file))
+        with open(file, encoding="utf_8_sig") as inputFile:
+            inputAss = pyass.load(inputFile)
 
-        inputAss.styles = populate_styles(inputAss.styles)
+            inputAss.styles = populate_styles(inputAss.styles)
 
-        inputAss.events = filter_old_song_lines(inputAss.events)
-        inputAss.events = populate_songs(songService, inputAss.events, args.title)
+            inputAss.events = filter_old_song_lines(inputAss.events)
+            inputAss.events = populate_songs(
+                songService, inputAss.events, actorToStyle, args.title
+            )
 
-        with open(args.fname, "w+", encoding="utf_8_sig") as outFile:
-            pyass.dump(inputAss, outFile)
+            with open(file, "w+", encoding="utf_8_sig") as outFile:
+                pyass.dump(inputAss, outFile)
 
-    try:
-        subprocess.run(
-            [
-                "aegisub-cli",
-                "--automation",
-                "kara-templater.lua",
-                args.fname,
-                args.fname,
-                "Apply karaoke template",
-            ]
-        )
-    except FileNotFoundError:
-        pass
+        try:
+            subprocess.run(
+                [
+                    "aegisub-cli",
+                    "--automation",
+                    "kara-templater.lua",
+                    file,
+                    file,
+                    "Apply karaoke template",
+                ]
+            )
+        except FileNotFoundError:
+            pass
 
 
 if __name__ == "__main__":

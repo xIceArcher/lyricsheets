@@ -33,9 +33,7 @@ class SongServiceByDB(SongService):
 
     @with_cache("SongServiceByDB::get_song")
     def get_song(self, songName: str, spreadsheet: str = "") -> Song:
-        spreadsheetId = self.spreadsheetIds.get(
-            spreadsheet, default=self.defaultSpreadsheetId
-        )
+        spreadsheetId = self.spreadsheetIds.get(spreadsheet, self.defaultSpreadsheetId)
 
         songKeyToFind = self._to_song_key(songName)
 
@@ -64,15 +62,19 @@ class SongServiceByDB(SongService):
 
     @with_cache("SongServiceByDB::get_format_tags")
     def get_format_tags(self, spreadsheet: str = "") -> Mapping[str, str]:
-        spreadsheetId = self.spreadsheetIds.get(
-            spreadsheet, default=self.defaultSpreadsheetId
-        )
+        spreadsheetId = self.spreadsheetIds.get(spreadsheet, self.defaultSpreadsheetId)
 
         return self.service.songTemplateDB.get_format_tags(spreadsheetId)
 
+    @with_cache("SongServiceByDB::get_all_format_tags")
+    def get_all_format_tags(self) -> Mapping[str, str]:
+        return {
+            actor: style
+            for group, _ in self.spreadsheetIds.items()
+            for actor, style in self.get_format_tags(group).items()
+        }
+
     def save_song(self, song: Song, spreadsheet: str = ""):
-        spreadsheetId = self.spreadsheetIds.get(
-            spreadsheet, default=self.defaultSpreadsheetId
-        )
+        spreadsheetId = self.spreadsheetIds.get(spreadsheet, self.defaultSpreadsheetId)
 
         self.service.save_song(spreadsheetId, song)
