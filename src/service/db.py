@@ -14,11 +14,11 @@ class SongServiceByDB(SongService):
         self,
         googleCredentials: Mapping[str, str],
         spreadsheetIds: Mapping[str, str],
-        defaultSpreadsheetId: str = "",
+        defaultGroup: str = "",
         cache: Optional[Cache] = None,
     ) -> None:
         self.spreadsheetIds = spreadsheetIds
-        self.defaultSpreadsheetId = defaultSpreadsheetId
+        self.defaultSpreadsheetId = spreadsheetIds[defaultGroup]
         self.service = SongDB(googleCredentials, cache=cache)
         self.cache = cache
 
@@ -26,14 +26,16 @@ class SongServiceByDB(SongService):
 
     def _create_song_mappings(self):
         self.songMappings = {
-            self._to_song_key(song): {"group": group, "name": song} 
-            for group, id in self.spreadsheetIds.items() 
+            self._to_song_key(song): {"group": group, "name": song}
+            for group, id in self.spreadsheetIds.items()
             for song in self.service.list_song_names(id)
         }
 
     @with_cache("SongServiceByDB::get_song")
     def get_song(self, songName: str, spreadsheet: str = "") -> Song:
-        spreadsheetId = self.spreadsheetIds.get(spreadsheet, default=self.defaultSpreadsheetId)
+        spreadsheetId = self.spreadsheetIds.get(
+            spreadsheet, default=self.defaultSpreadsheetId
+        )
 
         songKeyToFind = self._to_song_key(songName)
 
@@ -46,7 +48,9 @@ class SongServiceByDB(SongService):
             for existingSongName in self.service.list_song_names(spreadsheetId):
                 if self._to_song_key(existingSongName) == songKeyToFind:
                     return self.service.get_song(
-                        self.defaultSpreadsheetId if not spreadsheetId else spreadsheetId,
+                        self.defaultSpreadsheetId
+                        if not spreadsheetId
+                        else spreadsheetId,
                         existingSongName,
                     )
 
@@ -60,11 +64,15 @@ class SongServiceByDB(SongService):
 
     @with_cache("SongServiceByDB::get_format_tags")
     def get_format_tags(self, spreadsheet: str = "") -> Mapping[str, str]:
-        spreadsheetId = self.spreadsheetIds.get(spreadsheet, default=self.defaultSpreadsheetId)
-            
+        spreadsheetId = self.spreadsheetIds.get(
+            spreadsheet, default=self.defaultSpreadsheetId
+        )
+
         return self.service.songTemplateDB.get_format_tags(spreadsheetId)
 
     def save_song(self, song: Song, spreadsheet: str = ""):
-        spreadsheetId = self.spreadsheetIds.get(spreadsheet, default=self.defaultSpreadsheetId)
+        spreadsheetId = self.spreadsheetIds.get(
+            spreadsheet, default=self.defaultSpreadsheetId
+        )
 
         self.service.save_song(spreadsheetId, song)

@@ -36,7 +36,7 @@ def main():
     songService = SongServiceByDB(
         config["google_credentials"],
         config["spreadsheets"],
-        config["spreadsheet_id"],
+        config["default"],
     )
 
     songService.save_song(song, args.group)
