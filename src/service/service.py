@@ -10,13 +10,13 @@ class NotFoundError(Exception):
 
 class SongService:
     @abstractmethod
-    def get_song(self, songName: str, spreadsheetId: str = "") -> Song:
+    def get_song(self, songName: str, group: str = "") -> Song:
         ...
 
     @abstractmethod
-    def get_format_tags(self, spreadsheetId: str = "") -> Mapping[str, str]:
+    def get_format_tags(self, group: str = "") -> Mapping[str, str]:
         ...
 
     @abstractmethod
-    def save_song(self, song: Song, spreadsheetId: str = ""):
+    def save_song(self, song: Song, group: str = ""):
         ...
