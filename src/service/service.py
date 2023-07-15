@@ -10,7 +10,7 @@ class NotFoundError(Exception):
 
 class SongService:
     @abstractmethod
-    def get_song(self, songName: str, group: str = "") -> Song:
+    def get_song(self, songName: str) -> Song:
         ...
 
     @abstractmethod

@@ -32,7 +32,7 @@ class SongServiceByDB(SongService):
         }
 
     @with_cache("SongServiceByDB::get_song")
-    def get_song(self, songName: str, group: str = "") -> Song:
+    def get_song(self, songName: str) -> Song:
 
         songKeyToFind = self._to_song_key(songName)
 
