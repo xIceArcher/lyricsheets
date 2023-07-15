@@ -18,5 +18,9 @@ class SongService:
         ...
 
     @abstractmethod
+    def get_all_format_tags(self) -> Mapping[str, str]:
+        ...
+
+    @abstractmethod
     def save_song(self, song: Song, group: str = ""):
         ...
