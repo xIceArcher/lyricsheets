@@ -20,7 +20,8 @@ def main():
 
     songService = SongServiceByDB(
         config["google_credentials"],
-        config["spreadsheet_id"],
+        config["spreadsheets"],
+        config["default"],
         MemoryCache(),
     )
 
