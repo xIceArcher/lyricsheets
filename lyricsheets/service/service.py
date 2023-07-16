@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from collections.abc import Mapping
 
-from src.models import Song
+from lyricsheets.models import Song
 
 
 class NotFoundError(Exception):

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 import pyass
 
-from src.models import Song, SongLine
+from lyricsheets.models import Song, SongLine
 
 from .consts import *
 from ..models.karaoke import *

@@ -4,9 +4,9 @@ from functools import reduce
 from itertools import accumulate
 from typing import Sequence
 
-from src.models import SongLine
+from lyricsheets.models import SongLine
 
-from src.fonts import FontScaler
+from lyricsheets.fonts import FontScaler
 
 import pyass
 from pyass import Style

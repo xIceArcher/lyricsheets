@@ -2,9 +2,9 @@ from collections.abc import Mapping
 from typing import Optional
 import string
 
-from src.models import Song
-from src.db import SongDB
-from src.cache import Cache, with_cache
+from lyricsheets.models import Song
+from lyricsheets.db import SongDB
+from lyricsheets.cache import Cache, with_cache
 
 from .service import SongService, NotFoundError
 

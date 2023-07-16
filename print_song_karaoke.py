@@ -1,8 +1,8 @@
 import argparse
 import json
 
-from src.cache import MemoryCache
-from src.service import SongServiceByDB
+from lyricsheets.cache import MemoryCache
+from lyricsheets.service import SongServiceByDB
 
 
 def main():
