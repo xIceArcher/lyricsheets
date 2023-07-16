@@ -1,7 +1,7 @@
 import json
 
-from src.service import SongServiceByDB
-from src.cache import RedisCache
+from lyricsheets.service import SongServiceByDB
+from lyricsheets.cache import RedisCache
 
 from flask import Flask
 from flask.wrappers import Response

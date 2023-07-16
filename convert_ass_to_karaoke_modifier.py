@@ -2,7 +2,7 @@ import argparse
 import os
 import pyass
 
-from src.ass import read_karaoke
+from lyricsheets.ass import read_karaoke
 
 
 def main():

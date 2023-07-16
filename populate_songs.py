@@ -9,12 +9,12 @@ import pyass
 import subprocess
 import sys
 
-from src.ass import REQUIRED_STYLES, retrieve_effect
-from src.cache import MemoryCache
-from src.service import SongService, SongServiceByDB
-from src.models import Modifiers
+from lyricsheets.ass import REQUIRED_STYLES, retrieve_effect
+from lyricsheets.cache import MemoryCache
+from lyricsheets.service import SongService, SongServiceByDB
+from lyricsheets.models import Modifiers
 
-import src.effect
+import lyricsheets.effect
 
 SONG_STYLE_NAME = "Song"
 

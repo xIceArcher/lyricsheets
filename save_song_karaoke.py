@@ -3,9 +3,9 @@ import json
 import os
 import pyass
 
-from src.ass import read_karaoke
-from src.models import Song, SongTitle
-from src.service import SongServiceByDB
+from lyricsheets.ass import read_karaoke
+from lyricsheets.models import Song, SongTitle
+from lyricsheets.service import SongServiceByDB
 
 
 def main():

@@ -5,9 +5,9 @@ import itertools
 import operator
 from typing import Optional, Any
 
-from src.cache import Cache, with_cache
-from src.models import *
-from src.sheets import GoogleSheetsClient, RateLimitedGoogleSheetsClient
+from lyricsheets.cache import Cache, with_cache
+from lyricsheets.models import *
+from lyricsheets.sheets import GoogleSheetsClient, RateLimitedGoogleSheetsClient
 
 
 class SongTemplateDB:

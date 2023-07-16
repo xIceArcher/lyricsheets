@@ -3,7 +3,7 @@ from datetime import timedelta
 import functools
 import pyass
 
-from src.models import SongLine, SongLineSyllable
+from lyricsheets.models import SongLine, SongLineSyllable
 
 
 def read_karaoke(events: Sequence[pyass.Event]) -> list[SongLine]:
