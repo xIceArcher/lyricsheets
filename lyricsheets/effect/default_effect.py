@@ -51,7 +51,7 @@ def get_enter_transition_tag(
     resultTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0x00)],
 ) -> pyass.Tag:
     return pyass.TransformTag(
-        start=kChar.fadeOffset, end=switchDuration + kChar.fadeOffset, to=resultTag
+        start=kChar.fadeOffset, end=switchDuration + kChar.fadeOffset, to=list(resultTag)
     )
 
 
@@ -70,7 +70,7 @@ def get_exit_transition_tag(
         - transitionDuration
         + 2 * switchDuration
         + kChar.fadeOffset,
-        to=resultTag,
+        to=list(resultTag),
     )
 
 
@@ -85,7 +85,7 @@ def get_char_actor_tag(
         pyass.TransformTag(
             start=time + kChar.fadeOffset,
             end=time + kChar.fadeOffset,
-            to=actorToStyle[actor],
+            to=list(actorToStyle[actor]),
         )
         for time, actor in kChar.line.actorSwitches
     ]
@@ -101,7 +101,7 @@ def get_char_karaoke_tag(
         return [pyass.KaraokeTag(kChar.karaDuration)]
     else:
         return [
-            pyass.TransformTag(start=kChar.karaStart, end=kChar.karaEnd, to=resultTag)
+            pyass.TransformTag(start=kChar.karaStart, end=kChar.karaEnd, to=list(resultTag))
         ]
 
 

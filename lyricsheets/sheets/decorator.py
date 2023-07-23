@@ -20,7 +20,7 @@ def token_bucket(key: str, num_tokens: int):
         class RateLimitException(Exception):
             pass
 
-        @on_exception(expo, RateLimitException)
+        @on_exception(expo, exception=RateLimitException)
         def wrapper(self: WithTokenBucket, *args, **kwargs):
             if not self.bucket.consume(key=key, num_tokens=num_tokens):
                 raise RateLimitException()

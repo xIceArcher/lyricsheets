@@ -154,4 +154,4 @@ def register_effect(name: str, effect: Effect):
 
 
 def retrieve_effect(name: str):
-    return _effects.get(name)
+    return _effects[name]

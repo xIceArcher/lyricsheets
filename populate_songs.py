@@ -2,7 +2,7 @@ import argparse
 from collections.abc import Mapping, Sequence
 from datetime import timedelta
 import functools
-import importlib
+import importlib.util
 import json
 import os
 import pyass
@@ -74,6 +74,9 @@ def populate_song(
     for modifier in allModifiers:
         if modifier.operation == "import":
             spec = importlib.util.find_spec(modifier.rest[0])
+            if not spec or not spec.loader:
+                raise ModuleNotFoundError
+
             lib = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(lib)
         elif modifier.operation == "kfx":

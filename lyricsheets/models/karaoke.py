@@ -1,23 +1,17 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import reduce
-from itertools import accumulate
-from typing import Sequence
+from typing import Sequence, TypeVar
 
 from lyricsheets.models import SongLine
-
 from lyricsheets.fonts import FontScaler
 
 import pyass
 from pyass import Style
 
-
-class KLine:
-    pass
-
-
-class KSyl:
-    pass
+KChar = TypeVar("KChar", bound="KChar")
+KSyl = TypeVar("KSyl", bound="KSyl")
+KLine = TypeVar("KLine", bound="KLine")
 
 
 @dataclass
@@ -25,12 +19,13 @@ class KChar:
     char: str
     i: int
     sylI: int
-    fadeOffset: timedelta() = timedelta()
-    karaStart: timedelta() = timedelta()
-    karaEnd: timedelta() = timedelta()
+    line: KLine
+    syl: KSyl
 
-    line: KLine = None
-    syl: KSyl = None
+    fadeOffset: timedelta = timedelta()
+    karaStart: timedelta = timedelta()
+    karaEnd: timedelta = timedelta()
+
 
     @property
     def karaDuration(self) -> timedelta:
@@ -39,13 +34,13 @@ class KChar:
 
 @dataclass
 class KSyl:
-    start: timedelta()
-    end: timedelta()
-    chars: Sequence[KChar]
+    start: timedelta
+    end: timedelta
+    chars: list[KChar]
     inlineFx: str
     i: int
 
-    line: KLine = None
+    line: KLine
 
     @property
     def text(self) -> str:
@@ -76,11 +71,11 @@ class KSyl:
 
 @dataclass
 class KLine:
-    start: timedelta()
-    end: timedelta()
-    kara: Sequence[KSyl]
+    start: timedelta
+    end: timedelta
+    kara: list[KSyl]
     startActor: str
-    actorSwitches: Sequence[tuple[int, str]]
+    actorSwitches: list[tuple[timedelta, str]]
     isSecondary: bool
     isAlone: bool
     isEN: bool
@@ -202,7 +197,7 @@ def to_en_k_line(line: SongLine, lineNum: int = 0) -> KLine:
         start=line.start,
         end=line.start,
         chars=[],
-        inlineFx=None,
+        inlineFx='',
         i=0,
         line=kLineEN,
     )

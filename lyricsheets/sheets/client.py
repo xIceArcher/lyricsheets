@@ -31,7 +31,7 @@ class GoogleSheetsClient:
 
     @on_exception(
         expo,
-        HttpError,
+        exception=HttpError,
         giveup=lambda e: not isinstance(e, HttpError)
         or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
         max_tries=10,
@@ -45,7 +45,7 @@ class GoogleSheetsClient:
 
     @on_exception(
         expo,
-        HttpError,
+        exception=HttpError,
         giveup=lambda e: not isinstance(e, HttpError)
         or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
         max_tries=10,
@@ -57,7 +57,7 @@ class GoogleSheetsClient:
 
     @on_exception(
         expo,
-        HttpError,
+        exception=HttpError,
         giveup=lambda e: not isinstance(e, HttpError)
         or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
         max_tries=10,
@@ -80,7 +80,7 @@ class GoogleSheetsClient:
 
     @on_exception(
         expo,
-        HttpError,
+        exception=HttpError,
         giveup=lambda e: not isinstance(e, HttpError)
         or e.status_code != HTTPStatus.TOO_MANY_REQUESTS,
         max_tries=10,
