@@ -1,9 +1,8 @@
 backoff==2.2.1
-dataclass_wizard==0.22.2
+dataclass-wizard==0.22.2
 Flask==2.2.2
-google_api_python_client==2.65.0
-matplotlib==3.7.1
-Pillow==9.5.0
-protobuf==4.22.3
-pyass==0.1.1
-token_bucket==0.3.0
+google-api-python-client==2.65.0
+pyass==0.1.2
+redis==4.4.0
+token-bucket==0.3.0
+wxPython==4.2.1

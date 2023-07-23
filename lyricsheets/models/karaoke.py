@@ -56,7 +56,7 @@ class KSyl:
         return self.end - self.start
 
     def calculate_char_kara_times(self, style: Style):
-        fontScaler = FontScaler(style.fontName, style.fontSize)
+        fontScaler = FontScaler(style)
 
         syllableCharLengths = [
             timedelta(milliseconds=c * 10)
@@ -104,7 +104,7 @@ class KLine:
             k.calculate_char_kara_times(style)
 
     def calculate_char_fade_offsets(self, style: Style, transitionDuration: timedelta):
-        fontScaler = FontScaler(style.fontName, style.fontSize)
+        fontScaler = FontScaler(style)
 
         lineCharTimes = [
             timedelta(milliseconds=m)
