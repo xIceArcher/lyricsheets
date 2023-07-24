@@ -18,12 +18,8 @@ class FontScaler:
     def split_by_rendered_width(
         self, toSplit: int, text: str, shouldRoundToInteger: bool = True
     ) -> Sequence[float]:
-        partialTextExtents = self.dc.GetPartialTextExtents(text)
-        vector = [partialTextExtents[0]] + [
-            partialTextExtents[i + 1] - partialTextExtents[i]
-            for i in range(len(partialTextExtents) - 1)
-        ]
-        totalLength = partialTextExtents[-1]
+        vector = [self.dc.GetTextExtent(c).width for c in text]
+        totalLength = sum(vector)
         unitVector = [dim / totalLength for dim in vector]
 
         actualScaledVector = [toSplit * dim for dim in unitVector]
