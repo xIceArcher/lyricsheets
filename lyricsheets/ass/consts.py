@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import pyass
 
 # Styles
@@ -77,4 +75,3 @@ LYRICS_TAGS = pyass.Tags(
         pyass.AlignmentTag(pyass.Alignment.CENTER),
     ]
 )
-

@@ -1,11 +1,10 @@
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Optional
 
 from dataclass_wizard import JSONWizard
 
-from .modifier import Modifier, Modifiers
+from .modifier import Modifiers
 
 
 @dataclass

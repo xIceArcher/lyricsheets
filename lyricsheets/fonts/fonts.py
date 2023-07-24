@@ -2,19 +2,29 @@ from collections.abc import Sequence
 from functools import cache
 import math
 
-from PIL import ImageFont
-from matplotlib.font_manager import findSystemFonts
+from pyass import Style
+import wx
+
+_ = wx.App()
+PRECISION_SCALE = 64
 
 
 class FontScaler:
-    def __init__(self, fontName: str, fontSize: int) -> None:
-        self.font = _find_font(fontName, fontSize)
+    def __init__(self, style: Style):
+        self.dc = wx.MemoryDC()
+        self.dc.SetFont(_find_font(style))
+        self.style = style
 
     def split_by_rendered_width(
         self, toSplit: int, text: str, shouldRoundToInteger: bool = True
     ) -> Sequence[float]:
-        totalLength = self.font.getlength(text)
-        unitVector = [self.font.getlength(c) / totalLength for c in text]
+        partialTextExtents = self.dc.GetPartialTextExtents(text)
+        vector = [partialTextExtents[0]] + [
+            partialTextExtents[i + 1] - partialTextExtents[i]
+            for i in range(len(partialTextExtents) - 1)
+        ]
+        totalLength = partialTextExtents[-1]
+        unitVector = [dim / totalLength for dim in vector]
 
         actualScaledVector = [toSplit * dim for dim in unitVector]
         if not shouldRoundToInteger:
@@ -32,19 +42,46 @@ class FontScaler:
 
         return ans
 
+    def get_length(self, text: str) -> int:
+        width = 0
+        if self.style.spacing:
+            for c in text:
+                extent = self.dc.GetTextExtent(c)
+                scaling = (
+                    self.style.fontSize
+                    * PRECISION_SCALE
+                    / (extent.height if extent.height > 0 else 1)
+                )
+                width += (extent.width + self.style.spacing) * scaling
+        else:
+            extent = self.dc.GetTextExtent(text)
+            scaling = (
+                self.style.fontSize
+                * PRECISION_SCALE
+                / (extent.height if extent.height > 0 else 1)
+            )
+            width = extent.width * scaling
 
-class FontNotFoundException(Exception):
-    pass
+        return int(round(self.style.scaleX / 100 * width / PRECISION_SCALE, 0))
+
+
+def _find_font(style: Style) -> wx.Font:
+    return _find_font_cached(
+        style.fontName, style.fontSize, style.isBold, style.isItalic, style.isUnderline, style.isStrikeout
+    )
 
 
 @cache
-def _find_font(fontName: str, fontSize: int) -> ImageFont.FreeTypeFont:
-    for font in findSystemFonts():
-        try:
-            f = ImageFont.FreeTypeFont(font)
-            if f.getname()[0] == fontName:
-                return ImageFont.truetype(font, fontSize)
-        except:
-            continue
-
-    raise FontNotFoundException(fontName)
+def _find_font_cached(
+    fontName: str, fontSize: int, isBold: bool, isItalic: bool, isUnderline: bool, isStrikethrough: bool
+) -> wx.Font:
+    return wx.Font(
+        wx.FontInfo(fontSize * PRECISION_SCALE)
+        .FaceName(fontName)
+        .Family(wx.FONTFAMILY_DEFAULT)
+        .Bold(isBold)
+        .Italic(isItalic)
+        .Underlined(isUnderline)
+        .Strikethrough(isStrikethrough)
+        .Encoding(wx.FONTENCODING_SYSTEM)
+    )

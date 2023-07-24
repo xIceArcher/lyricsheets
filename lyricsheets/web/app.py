@@ -14,7 +14,7 @@ with open(config_file_path) as f:
     redis_cfg = cfg['redis']
 
 songServer = SongServiceByDB(
-    cfg['google_credentials'], cfg['spreadsheet_id'],
+    cfg['google_credentials'], cfg['spreadsheet_id'], cfg['default'],
     RedisCache(redis_cfg['host'], redis_cfg['port'], redis_cfg['db'])
 )
 app = Flask(__name__)
