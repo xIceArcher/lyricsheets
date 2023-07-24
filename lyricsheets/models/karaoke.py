@@ -23,33 +23,6 @@ def style_check(func):
     return style_wrapper
 
 
-def style_check(func):
-    def style_wrapper(*args):
-        if not args[0].style:
-            raise StyleNotBoundException()
-        return func(*args)
-
-    return style_wrapper
-
-
-def style_check(func):
-    def style_wrapper(*args):
-        if not args[0].style:
-            raise StyleNotBoundException()
-        return func(*args)
-
-    return style_wrapper
-
-
-def style_check(func):
-    def style_wrapper(*args):
-        if not args[0].style:
-            raise StyleNotBoundException()
-        return func(*args)
-
-    return style_wrapper
-
-
 @dataclass
 class KChar:
     char: str
