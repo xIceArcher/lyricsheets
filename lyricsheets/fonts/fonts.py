@@ -67,13 +67,23 @@ class FontScaler:
 
 def _find_font(style: Style) -> wx.Font:
     return _find_font_cached(
-        style.fontName, style.fontSize, style.isBold, style.isItalic, style.isUnderline, style.isStrikeout
+        style.fontName,
+        style.fontSize,
+        style.isBold,
+        style.isItalic,
+        style.isUnderline,
+        style.isStrikeout,
     )
 
 
 @cache
 def _find_font_cached(
-    fontName: str, fontSize: int, isBold: bool, isItalic: bool, isUnderline: bool, isStrikethrough: bool
+    fontName: str,
+    fontSize: int,
+    isBold: bool,
+    isItalic: bool,
+    isUnderline: bool,
+    isStrikethrough: bool,
 ) -> wx.Font:
     return wx.Font(
         wx.FontInfo(fontSize * PRECISION_SCALE)
