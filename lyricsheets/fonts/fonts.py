@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 from functools import cache
 import math
-import platform
 
 from pyass import Style
 import wx

@@ -34,6 +34,7 @@ class KChar:
     karaStart: timedelta = timedelta()
     karaEnd: timedelta = timedelta()
 
+    style: Style = None
     _width: float = 0
     _left: float = 0
 
@@ -93,6 +94,7 @@ class KSyl:
     i: int
     line: KLine
 
+    style: Style = None
     _width: float = 0
     _preSpaceWidth: float = 0
     _postSpaceWidth: float = 0
@@ -213,6 +215,7 @@ class KLine:
     isEN: bool
     lineNum: int
 
+    style: Style = None
     _width: float = 0
     _height: float = 0
     _left: float = 0
