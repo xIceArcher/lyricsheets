@@ -89,7 +89,7 @@ def get_char_actor_tag(
     for time, actor in kChar.line.actorSwitches:
         switchSylFadeOffset = timedelta()
 
-        if kChar.line.isEN:
+        if isinstance(kChar.line, ENKLine):
             relevantLineKara = kChar.line.romajiLine.kara
         else:
             relevantLineKara = kChar.line.kara
@@ -133,7 +133,7 @@ def to_default_event(
     switchDuration: timedelta,
     transitionDuration: timedelta,
 ) -> pyass.Event:
-    if line.isEN:
+    if isinstance(line, ENKLine):
         line.calculate_char_offsets(EN_STYLE, transitionDuration)
         line.romajiLine.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
     else:
