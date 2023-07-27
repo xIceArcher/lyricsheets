@@ -90,9 +90,9 @@ def get_char_actor_tag(
         switchSylFadeOffset = timedelta()
 
         if isinstance(kChar.line, ENKLine):
-            relevantLineKara = kChar.line.romajiLine.kara
+            relevantLineKara = kChar.line.romajiLine.syls
         else:
-            relevantLineKara = kChar.line.kara
+            relevantLineKara = kChar.line.syls
 
         # Find the KSyl at which this switch occurs
         for syl in relevantLineKara:
@@ -114,17 +114,36 @@ def get_char_actor_tag(
 def get_char_karaoke_tag(
     kChar: KChar, resultTag: Sequence[pyass.Tag] = []
 ) -> Sequence[pyass.Tag]:
-    if kChar.karaDuration == timedelta():
+    if kChar.duration == timedelta():
         return []
     # Karaoke timing
     if len(resultTag) == 0:
-        return [pyass.KaraokeTag(kChar.karaDuration)]
+        return [pyass.KaraokeTag(kChar.duration)]
     else:
         return [
             pyass.TransformTag(
-                start=kChar.karaStart, end=kChar.karaEnd, to=list(resultTag)
+                start=kChar.start, end=kChar.end, to=list(resultTag)
             )
         ]
+
+
+def get_syl_tags(
+    kSyl: KSyl,
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    switchDuration: timedelta,
+    transitionDuration: timedelta,
+) -> Sequence[pyass.EventPart]:
+    return [
+        pyass.EventPart(
+            tags=[
+                *get_char_transform_tags(char, switchDuration, transitionDuration),
+                *get_char_actor_tag(char, actorToStyle, switchDuration),
+                *get_char_karaoke_tag(char),
+            ],
+            text=char.text,
+        )
+        for char in kSyl.chars
+    ]
 
 
 def to_default_event(
@@ -161,17 +180,10 @@ def to_default_event(
     if not line.isEN:
         eventParts.append(pyass.EventPart(tags=[pyass.KaraokeTag(switchDuration)]))
 
-    # Generate character style tags
-    for char in line.chars:
-        eventParts.append(
-            pyass.EventPart(
-                tags=[
-                    *get_char_transform_tags(char, switchDuration, transitionDuration),
-                    *get_char_actor_tag(char, actorToStyle, switchDuration),
-                    *get_char_karaoke_tag(char),
-                ],
-                text=char.char,
-            )
+    # Generate per syllable tags
+    for syl in line.syls:
+        eventParts.extend(
+            get_syl_tags(syl, actorToStyle, switchDuration, transitionDuration)
         )
 
     # Trailing switch duration

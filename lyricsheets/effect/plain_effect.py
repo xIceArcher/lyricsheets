@@ -19,7 +19,7 @@ def to_plain_event(line: KLine) -> pyass.Event:
                 ],
                 text=syl.text,
             )
-            for syl, syl2 in zip(line.kara, [None] + list(line.kara[:-1]))
+            for syl, syl2 in zip(line.syls, [None] + list(line.syls[:-1]))
         ],
     )
 

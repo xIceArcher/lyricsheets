@@ -18,23 +18,23 @@ KLine = TypeVar("KLine", bound="KLine")
 
 @dataclass
 class KChar:
-    char: str
-    i: int
-    sylI: int
+    text: str
+    idxInLine: int
     line: KLine
+    idxInSyl: int
     syl: KSyl
 
     @property
-    def karaStart(self) -> timedelta:
-        return self.syl._charKaraTimes[self.sylI]
+    def start(self) -> timedelta:
+        return self.syl._charKaraTimes[self.idxInSyl]
 
     @property
-    def karaEnd(self) -> timedelta:
-        return self.syl._charKaraTimes[self.sylI + 1]
+    def end(self) -> timedelta:
+        return self.syl._charKaraTimes[self.idxInSyl + 1]
 
     @property
-    def karaDuration(self) -> timedelta:
-        return self.karaEnd - self.karaStart
+    def duration(self) -> timedelta:
+        return self.end - self.start
 
     @property
     def style(self) -> pyass.Style:
@@ -42,14 +42,14 @@ class KChar:
 
     @cached_property
     def width(self) -> float:
-        return FontScaler(self.style).get_length(self.char)
+        return FontScaler(self.style).get_length(self.text)
 
     @cached_property
     def left(self) -> float:
-        if self.i == 0:
+        if self.idxInLine == 0:
             return self.line.left
 
-        prevChar = self.line.chars[self.i - 1]
+        prevChar = self.line.chars[self.idxInLine - 1]
         return prevChar.left + prevChar.width
 
     @property
@@ -82,7 +82,7 @@ class KChar:
 
     @property
     def fadeOffset(self) -> timedelta:
-        return self.line._charFadeOffsets[self.i]
+        return self.line._charFadeOffsets[self.idxInLine]
 
 
 @dataclass
@@ -91,12 +91,12 @@ class KSyl:
     end: timedelta
     chars: list[KChar]
     inlineFx: str
-    i: int
+    idxInLine: int
     line: KLine
 
     @property
     def text(self) -> str:
-        return "".join(char.char for char in self.chars)
+        return "".join(char.text for char in self.chars)
 
     @property
     def duration(self) -> timedelta:
@@ -130,10 +130,10 @@ class KSyl:
 
     @cached_property
     def left(self) -> float:
-        if self.i == 0:
+        if self.idxInLine == 0:
             return self.line.left + self.preSpaceWidth
 
-        prevSyl = self.line.kara[self.i - 1]
+        prevSyl = self.line.syls[self.idxInLine - 1]
         return (
             prevSyl.left + prevSyl.width + prevSyl.postSpaceWidth + self.preSpaceWidth
         )
@@ -182,12 +182,12 @@ class KSyl:
 class KLine:
     start: timedelta
     end: timedelta
-    kara: list[KSyl]
+    syls: list[KSyl]
     startActor: str
     actorSwitches: list[tuple[timedelta, str]]
     isSecondary: bool
     isAlone: bool
-    lineNum: int
+    idxInSong: int
 
     _style: Optional[pyass.Style] = None
     _resX: int = 1920
@@ -196,7 +196,7 @@ class KLine:
 
     @property
     def text(self) -> str:
-        return "".join(c.char for text in self.kara for c in text.chars)
+        return "".join(c.text for text in self.syls for c in text.chars)
 
     @property
     def duration(self) -> timedelta:
@@ -204,7 +204,7 @@ class KLine:
 
     @property
     def chars(self) -> Sequence[KChar]:
-        return [char for k in self.kara for char in k.chars]
+        return [char for k in self.syls for char in k.chars]
 
     @property
     def isEN(self) -> bool:
@@ -223,7 +223,7 @@ class KLine:
         self.__dict__.pop("width", None)
         self.__dict__.pop("_charFadeOffsets", None)
 
-        for syl in self.kara:
+        for syl in self.syls:
             syl.__dict__.pop("width", None)
             syl.__dict__.pop("preSpaceWidth", None)
             syl.__dict__.pop("postSpaceWidth", None)
@@ -243,7 +243,7 @@ class KLine:
     @resX.setter
     def resX(self, resX: int):
         # Invalidate cached properties
-        for syl in self.kara:
+        for syl in self.syls:
             syl.__dict__.pop("left", None)
 
         for char in self.chars:
@@ -260,7 +260,7 @@ class KLine:
         # Invalidate cached properties
         self.__dict__.pop("_charFadeOffsets", None)
 
-        for syl in self.kara:
+        for syl in self.syls:
             syl.__dict__.pop("_charKaraTimes", None)
 
         self._transitionDuration = transitionDuration
@@ -397,7 +397,7 @@ class StyleNotBoundException(Exception):
     pass
 
 
-def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
+def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> RomajiKLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -405,7 +405,7 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
     kLine = RomajiKLine(
         start=line.start,
         end=line.end,
-        kara=[],
+        syls=[],
         startActor=line.actors[0],
         actorSwitches=[
             (timedeltaUpToIdx[breakpoint], actor)
@@ -414,7 +414,7 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
         ],
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
-        lineNum=lineNum,
+        idxInSong=lineIdxInSong,
     )
 
     accLength = timedelta()
@@ -432,15 +432,15 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
             end=accLength + syl.length,
             inlineFx=actor,
             chars=[],
-            i=len(kLine.kara),
+            idxInLine=len(kLine.syls),
             line=kLine,
         )
 
         for c in syl.text:
             kChar = KChar(
-                char=c,
-                i=totalChars,
-                sylI=len(kSyl.chars),
+                text=c,
+                idxInLine=totalChars,
+                idxInSyl=len(kSyl.chars),
                 syl=kSyl,
                 line=kLine,
             )
@@ -448,21 +448,20 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
             kSyl.chars.append(kChar)
             totalChars += 1
 
-        kLine.kara.append(kSyl)
-
+        kLine.syls.append(kSyl)
         accLength += syl.length
 
     return kLine
 
 
-def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> ENKLine:
+def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineIdxInSong: int = 0) -> ENKLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
     kLineEN = ENKLine(
         start=line.start,
         end=line.end,
-        kara=[],
+        syls=[],
         startActor=line.actors[0],
         actorSwitches=[
             (timedeltaUpToIdx[breakpoint], actor)
@@ -472,7 +471,7 @@ def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> E
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
         romajiLine=romajiLine,
-        lineNum=lineNum,
+        idxInSong=lineIdxInSong,
     )
 
     kSylEN = KSyl(
@@ -480,21 +479,20 @@ def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> E
         end=line.start,
         chars=[],
         inlineFx="",
-        i=0,
+        idxInLine=0,
         line=kLineEN,
     )
 
     kSylEN.chars = [
         KChar(
-            char=char,
-            i=i,
-            sylI=i,
+            text=char,
+            idxInLine=i,
+            idxInSyl=i,
             syl=kSylEN,
             line=kLineEN,
         )
         for i, char, in enumerate(line.en)
     ]
 
-    kLineEN.kara.append(kSylEN)
-
+    kLineEN.syls.append(kSylEN)
     return kLineEN
