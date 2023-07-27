@@ -215,6 +215,7 @@ class KLine:
     isEN: bool
     lineNum: int
 
+    romajiLine: KLine = None
     style: Style = None
     _width: float = 0
     _height: float = 0
@@ -451,7 +452,7 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> KLine:
     return kLine
 
 
-def to_en_k_line(line: SongLine, lineNum: int = 0) -> KLine:
+def to_en_k_line(line: SongLine, romajiLine: KLine = None, lineNum: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -468,6 +469,7 @@ def to_en_k_line(line: SongLine, lineNum: int = 0) -> KLine:
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
         isEN=True,
+        romajiLine=romajiLine,
         lineNum=lineNum,
     )
 

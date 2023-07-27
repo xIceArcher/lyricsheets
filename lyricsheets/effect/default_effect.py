@@ -51,7 +51,9 @@ def get_enter_transition_tag(
     resultTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0x00)],
 ) -> pyass.Tag:
     return pyass.TransformTag(
-        start=kChar.fadeOffset, end=switchDuration + kChar.fadeOffset, to=list(resultTag)
+        start=kChar.fadeOffset,
+        end=switchDuration + kChar.fadeOffset,
+        to=list(resultTag),
     )
 
 
@@ -81,14 +83,32 @@ def get_char_actor_tag(
 ) -> Sequence[pyass.Tag]:
     if len(kChar.line.actorSwitches) == 0:
         return []
-    return list(actorToStyle[kChar.line.startActor]) + [
-        pyass.TransformTag(
-            start=time + kChar.fadeOffset,
-            end=time + kChar.fadeOffset,
-            to=list(actorToStyle[actor]),
+
+    ret = list(actorToStyle[kChar.line.startActor])
+
+    for time, actor in kChar.line.actorSwitches:
+        switchSylFadeOffset = timedelta()
+
+        if kChar.line.isEN:
+            relevantLineKara = kChar.line.romajiLine.kara
+        else:
+            relevantLineKara = kChar.line.kara
+
+        # Find the KSyl at which this switch occurs
+        for syl in relevantLineKara:
+            if syl.start == time:
+                switchSylFadeOffset = syl.chars[0].fadeOffset
+                break
+
+        ret.append(
+            pyass.TransformTag(
+                start=time + kChar.fadeOffset - switchSylFadeOffset,
+                end=time + kChar.fadeOffset - switchSylFadeOffset,
+                to=list(actorToStyle[actor]),
+            )
         )
-        for time, actor in kChar.line.actorSwitches
-    ]
+
+    return ret
 
 
 def get_char_karaoke_tag(
@@ -101,7 +121,9 @@ def get_char_karaoke_tag(
         return [pyass.KaraokeTag(kChar.karaDuration)]
     else:
         return [
-            pyass.TransformTag(start=kChar.karaStart, end=kChar.karaEnd, to=list(resultTag))
+            pyass.TransformTag(
+                start=kChar.karaStart, end=kChar.karaEnd, to=list(resultTag)
+            )
         ]
 
 
@@ -113,6 +135,7 @@ def to_default_event(
 ) -> pyass.Event:
     if line.isEN:
         line.calculate_char_offsets(EN_STYLE, transitionDuration)
+        line.romajiLine.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
     else:
         line.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
 
