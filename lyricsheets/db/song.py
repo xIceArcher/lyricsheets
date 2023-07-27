@@ -204,9 +204,6 @@ class SongDB:
 
         return song.SongLine(
             en=values[self.sheetsClient.get_column_idx("B")]["formattedValue"],
-            karaokeEffect=values[self.sheetsClient.get_column_idx("D")].get(
-                "formattedValue"
-            ),
             isSecondary="formattedValue"
             in values[self.sheetsClient.get_column_idx("F")],
             start=self._parse_timedelta(
