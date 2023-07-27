@@ -1,26 +1,19 @@
 from dataclasses import dataclass
 from datetime import timedelta
-from functools import reduce
+from functools import cached_property, reduce
+from itertools import accumulate
+import operator
 from typing import Optional, Sequence, TypeVar
+
+import pyass
 
 from lyricsheets.models import SongLine
 from lyricsheets.fonts import FontScaler
 
-import pyass
-from pyass import Style
 
 KChar = TypeVar("KChar", bound="KChar")
 KSyl = TypeVar("KSyl", bound="KSyl")
 KLine = TypeVar("KLine", bound="KLine")
-
-
-def style_check(func):
-    def style_wrapper(*args):
-        if not args[0].style:
-            raise StyleNotBoundException()
-        return func(*args)
-
-    return style_wrapper
 
 
 @dataclass
@@ -30,106 +23,34 @@ class KChar:
     sylI: int
     line: KLine
     syl: KSyl
-    fadeOffset: timedelta = timedelta()
-    karaStart: timedelta = timedelta()
-    karaEnd: timedelta = timedelta()
 
-    style: Optional[Style] = None
-    _width: float = 0
-    _left: float = 0
+    @property
+    def karaStart(self) -> timedelta:
+        return self.syl._charKaraTimes[self.sylI]
+
+    @property
+    def karaEnd(self) -> timedelta:
+        return self.syl._charKaraTimes[self.sylI + 1]
 
     @property
     def karaDuration(self) -> timedelta:
         return self.karaEnd - self.karaStart
 
     @property
-    @style_check
+    def style(self) -> pyass.Style:
+        return self.line.style
+
+    @cached_property
     def width(self) -> float:
-        return self._width
+        return FontScaler(self.style).get_length(self.char)
 
-    @property
-    @style_check
+    @cached_property
     def left(self) -> float:
-        return self._left
+        if self.i == 0:
+            return self.line.left
 
-    @property
-    def height(self) -> float:
-        return self.line.height
-
-    @property
-    def top(self) -> float:
-        return self.line.top
-
-    @property
-    def y(self) -> float:
-        return self.line.y
-
-    @property
-    def center(self) -> float:
-        return self._left + self._width / 2
-
-    @property
-    def right(self) -> float:
-        return self._left + self._width
-
-    @property
-    def middle(self) -> float:
-        return self.top + self.height / 2
-
-    @property
-    def bottom(self) -> float:
-        return self.top + self.height
-
-    def _calculate_sizing(self):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        fontScaler = FontScaler(self.style)
-        self._width = fontScaler.get_length(self.char)
-
-
-@dataclass
-class KSyl:
-    start: timedelta
-    end: timedelta
-    chars: list[KChar]
-    inlineFx: str
-    i: int
-    line: KLine
-
-    style: Optional[Style] = None
-    _width: float = 0
-    _preSpaceWidth: float = 0
-    _postSpaceWidth: float = 0
-    _left: float = 0
-
-    @property
-    def text(self) -> str:
-        return "".join(char.char for char in self.chars)
-
-    @property
-    def duration(self) -> timedelta:
-        return self.end - self.start
-
-    @property
-    @style_check
-    def width(self) -> float:
-        return self._width
-
-    @property
-    @style_check
-    def preSpaceWidth(self) -> float:
-        return self._preSpaceWidth
-
-    @property
-    @style_check
-    def postSpaceWidth(self) -> float:
-        return self._postSpaceWidth
-
-    @property
-    @style_check
-    def left(self) -> float:
-        return self._left
+        prevChar = self.line.chars[self.i - 1]
+        return prevChar.left + prevChar.width
 
     @property
     def height(self) -> float:
@@ -159,54 +80,102 @@ class KSyl:
     def bottom(self) -> float:
         return self.top + self.height
 
-    def calculate_char_kara_times(self, style: Style):
-        fontScaler = FontScaler(style)
+    @property
+    def fadeOffset(self) -> timedelta:
+        return self.line._charFadeOffsets[self.i]
 
+
+@dataclass
+class KSyl:
+    start: timedelta
+    end: timedelta
+    chars: list[KChar]
+    inlineFx: str
+    i: int
+    line: KLine
+
+    @property
+    def text(self) -> str:
+        return "".join(char.char for char in self.chars)
+
+    @property
+    def duration(self) -> timedelta:
+        return self.end - self.start
+
+    @property
+    def style(self) -> pyass.Style:
+        return self.line.style
+
+    @cached_property
+    def width(self) -> float:
+        return FontScaler(self.style).get_length(self.text.strip())
+
+    @cached_property
+    def preSpaceWidth(self) -> float:
+        numPreSpaces = len(self.text) - len(self.text.lstrip())
+        return (
+            FontScaler(self.style).get_length(self.text[:numPreSpaces])
+            if numPreSpaces
+            else 0
+        )
+
+    @cached_property
+    def postSpaceWidth(self) -> float:
+        numPostSpaces = len(self.text) - len(self.text.rstrip())
+        return (
+            FontScaler(self.style).get_length(self.text[-(numPostSpaces):])
+            if numPostSpaces
+            else 0
+        )
+
+    @cached_property
+    def left(self) -> float:
+        if self.i == 0:
+            return self.line.left + self.preSpaceWidth
+
+        prevSyl = self.line.kara[self.i - 1]
+        return (
+            prevSyl.left + prevSyl.width + prevSyl.postSpaceWidth + self.preSpaceWidth
+        )
+
+    @property
+    def height(self) -> float:
+        return self.line.height
+
+    @property
+    def top(self) -> float:
+        return self.line.top
+
+    @property
+    def y(self) -> float:
+        return self.line.y
+
+    @property
+    def center(self) -> float:
+        return self.left + self.width / 2
+
+    @property
+    def right(self) -> float:
+        return self.left + self.width
+
+    @property
+    def middle(self) -> float:
+        return self.top + self.height / 2
+
+    @property
+    def bottom(self) -> float:
+        return self.top + self.height
+
+    @cached_property
+    def _charKaraTimes(self) -> list[timedelta]:
         syllableCharLengths = [
             timedelta(milliseconds=c * 10)
-            for c in fontScaler.split_by_rendered_width(
+            for c in FontScaler(self.style).split_by_rendered_width(
                 pyass.timedelta(self.duration).total_centiseconds(), self.text
             )
         ]
 
-        sylAccLength = self.start
-
-        for char, syllableCharLength in zip(self.chars, syllableCharLengths):
-            char.karaStart = sylAccLength
-            char.karaEnd = sylAccLength + syllableCharLength
-
-            sylAccLength += syllableCharLength
-
-    def _calculate_sizing(self):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        fontScaler = FontScaler(self.style)
-
-        text = self.text
-        stripped = text.strip()
-
-        numPreSpaces = len(text) - len(text.lstrip())
-        numPostSpaces = len(text) - len(text.rstrip())
-
-        self._width = fontScaler.get_length(stripped)
-        self._preSpaceWidth = (
-            fontScaler.get_length(text[:numPreSpaces]) if numPreSpaces else 0
-        )
-        self._postSpaceWidth = (
-            fontScaler.get_length(text[-(numPostSpaces):]) if numPostSpaces else 0
-        )
-
-        for char in self.chars:
-            char._calculate_sizing()
-
-    def _calculate_positions(self, curX: float):
-        self._left = curX + self.preSpaceWidth
-
-        curSylX = curX
-        for char in self.chars:
-            char._left = curSylX
-            curSylX += char._width
+        return list(accumulate(syllableCharLengths, operator.add, initial=self.start))
 
 
 @dataclass
@@ -220,13 +189,10 @@ class KLine:
     isAlone: bool
     lineNum: int
 
-    style: Optional[Style] = None
-    _width: float = 0
-    _height: float = 0
-    _left: float = 0
-    _top: float = 0
-    _x: float = 0
-    _y: float = 0
+    _style: Optional[pyass.Style] = None
+    _resX: int = 1920
+    resY: int = 1080
+    _transitionDuration: timedelta = timedelta()
 
     @property
     def text(self) -> str:
@@ -241,34 +207,149 @@ class KLine:
         return [char for k in self.kara for char in k.chars]
 
     @property
-    @style_check
+    def isEN(self) -> bool:
+        return False
+
+    @property
+    def style(self) -> pyass.Style:
+        if not self._style:
+            raise StyleNotBoundException()
+
+        return self._style
+
+    @style.setter
+    def style(self, style: pyass.Style):
+        # Invalidate cached properties
+        self.__dict__.pop("width", None)
+        self.__dict__.pop("_charFadeOffsets", None)
+
+        for syl in self.kara:
+            syl.__dict__.pop("width", None)
+            syl.__dict__.pop("preSpaceWidth", None)
+            syl.__dict__.pop("postSpaceWidth", None)
+            syl.__dict__.pop("left", None)
+            syl.__dict__.pop("_charKaraTimes", None)
+
+        for char in self.chars:
+            char.__dict__.pop("width", None)
+            char.__dict__.pop("left", None)
+
+        self._style = style
+
+    @property
+    def resX(self) -> int:
+        return self._resX
+
+    @resX.setter
+    def resX(self, resX: int):
+        # Invalidate cached properties
+        for syl in self.kara:
+            syl.__dict__.pop("left", None)
+
+        for char in self.chars:
+            char.__dict__.pop("left", None)
+
+        self._resX = resX
+
+    @property
+    def transitionDuration(self) -> timedelta:
+        return self._transitionDuration
+
+    @transitionDuration.setter
+    def transitionDuration(self, transitionDuration: timedelta):
+        # Invalidate cached properties
+        self.__dict__.pop("_charFadeOffsets", None)
+
+        for syl in self.kara:
+            syl.__dict__.pop("_charKaraTimes", None)
+
+        self._transitionDuration = transitionDuration
+
+    @cached_property
     def width(self) -> float:
-        return self._width
+        return FontScaler(self.style).get_length(self.text)
 
     @property
-    @style_check
     def height(self) -> float:
-        return self._height
+        return self.style.fontSize
 
     @property
-    @style_check
     def left(self) -> float:
-        return self._left
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.TOP_LEFT,
+        }:
+            # Left aligned
+            return self.style.marginL
+        elif self.style.alignment in {
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.TOP,
+        }:
+            # Middle aligned
+            return (
+                self.resX + self.style.marginL - self.style.marginR - self.width
+            ) / 2
+        else:
+            # Right aligned
+            return self.resX - self.style.marginR - self.width
 
     @property
-    @style_check
     def top(self) -> float:
-        return self._top
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.BOTTOM_RIGHT,
+        }:
+            # Bottom aligned
+            return self.resY - self.style.marginV - self.height
+        elif self.style.alignment in {
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.CENTER_RIGHT,
+        }:
+            # Center aligned
+            return (
+                self.resY - self.style.marginV * 2 - self.height
+            ) / 2 + self.style.marginV
+        else:
+            # Top aligned
+            return self.style.marginV
 
     @property
-    @style_check
     def x(self) -> float:
-        return self._x
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.TOP_LEFT,
+        }:
+            return self.left
+        elif self.style.alignment in {
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.TOP,
+        }:
+            return self.center
+        else:
+            return self.right
 
     @property
-    @style_check
     def y(self) -> float:
-        return self._y
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.BOTTOM_RIGHT,
+        }:
+            return self.bottom
+        elif self.style.alignment in {
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.CENTER_RIGHT,
+        }:
+            return self.middle
+        else:
+            return self.top
 
     @property
     def center(self) -> float:
@@ -286,121 +367,16 @@ class KLine:
     def bottom(self) -> float:
         return self.top + self.height
 
-    def calculate_char_offsets(self, style: Style, transitionDuration: timedelta):
-        self.calculate_char_fade_offsets(style, transitionDuration)
-        for k in self.kara:
-            k.calculate_char_kara_times(style)
-
-    def calculate_char_fade_offsets(self, style: Style, transitionDuration: timedelta):
-        fontScaler = FontScaler(style)
-
+    @cached_property
+    def _charFadeOffsets(self) -> list[timedelta]:
         lineCharTimes = [
             timedelta(milliseconds=m)
-            for m in fontScaler.split_by_rendered_width(
-                pyass.timedelta(transitionDuration).total_milliseconds(), self.text
+            for m in FontScaler(self.style).split_by_rendered_width(
+                pyass.timedelta(self.transitionDuration).total_milliseconds(), self.text
             )
         ]
 
-        charAccTime = timedelta()
-        for char, lineCharTime in zip(self.chars, lineCharTimes):
-            char.fadeOffset = charAccTime
-            charAccTime += lineCharTime
-
-    def bind_style(self, style: Style):
-        self.style = style
-        for kara in self.kara:
-            kara.style = style
-            for char in kara.chars:
-                char.style = self.style
-
-        self._calculate_sizing()
-        self._calculate_positions()
-
-    def _calculate_sizing(self):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        fontScaler = FontScaler(self.style)
-
-        self._width = fontScaler.get_length(self.text)
-        self._height = self.style.fontSize
-
-        for syl in self.kara:
-            syl._calculate_sizing()
-
-    def _calculate_positions(self, resX: int = 1920, resY: int = 1080):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        # Horizontal positioning
-        if self.style.alignment in {
-            pyass.Alignment.BOTTOM_LEFT,
-            pyass.Alignment.CENTER_LEFT,
-            pyass.Alignment.TOP_LEFT,
-        }:
-            # Left aligned
-            self._left = self.style.marginL
-            self._x = self.left
-        elif self.style.alignment in {
-            pyass.Alignment.BOTTOM,
-            pyass.Alignment.CENTER,
-            pyass.Alignment.TOP,
-        }:
-            # Centered
-            self._left = (
-                resX + self.style.marginL - self.style.marginR - self.width
-            ) / 2
-            self._x = self.center
-            # Left aligned
-            self._left = self.style.marginL
-            self._x = self.left
-        elif self.style.alignment in {
-            pyass.Alignment.BOTTOM,
-            pyass.Alignment.CENTER,
-            pyass.Alignment.TOP,
-        }:
-            # Centered
-            self._left = (
-                resX + self.style.marginL - self.style.marginR - self.width
-            ) / 2
-            self._x = self.center
-        else:
-            # Right aligned
-            self._left = resX - self.style.marginR - self.width
-            self._x = self.right
-
-        # Vertical positioning
-        if self.style.alignment in {
-            pyass.Alignment.BOTTOM_LEFT,
-            pyass.Alignment.BOTTOM,
-            pyass.Alignment.BOTTOM_RIGHT,
-        }:
-            # Bottom aligned
-            self._top = resY - self.style.marginV - self.height
-            self._y = self.bottom
-        elif self.style.alignment in {
-            pyass.Alignment.CENTER_LEFT,
-            pyass.Alignment.CENTER,
-            pyass.Alignment.CENTER_RIGHT,
-        }:
-            # Middle aligned
-            self._top = (
-                resY - self.style.marginV * 2 - self.height
-            ) / 2 + self.style.marginV
-            self._y = self.middle
-        else:
-            # Top aligned
-            self._top = self.style.marginV
-            self._y = self.top
-
-        curX = self.left
-        for syl in self.kara:
-            syl._calculate_positions(curX)
-            curX += syl.preSpaceWidth + syl.width + syl.postSpaceWidth
-
-    @property
-    def isEN(self) -> bool:
-        return False
+        return list(accumulate(lineCharTimes, operator.add, initial=timedelta()))
 
 
 @dataclass
@@ -512,8 +488,6 @@ def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> E
         KChar(
             char=char,
             i=i,
-            karaStart=timedelta(),
-            karaEnd=timedelta(),
             sylI=i,
             syl=kSylEN,
             line=kLineEN,

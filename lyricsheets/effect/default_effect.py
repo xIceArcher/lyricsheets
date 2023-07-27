@@ -134,10 +134,14 @@ def to_default_event(
     transitionDuration: timedelta,
 ) -> pyass.Event:
     if isinstance(line, ENKLine):
-        line.calculate_char_offsets(EN_STYLE, transitionDuration)
-        line.romajiLine.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
+        line.style = EN_STYLE
+        line.transitionDuration = transitionDuration
+
+        line.romajiLine.style = ROMAJI_STYLE
+        line.romajiLine.transitionDuration = transitionDuration
     else:
-        line.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
+        line.style = ROMAJI_STYLE
+        line.transitionDuration = transitionDuration
 
     # Generate line style tags
     eventParts: list[pyass.EventPart] = [
