@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import reduce
-from typing import Sequence, TypeVar
+from typing import Optional, Sequence, TypeVar
 
 from lyricsheets.models import SongLine
 from lyricsheets.fonts import FontScaler
@@ -34,7 +34,7 @@ class KChar:
     karaStart: timedelta = timedelta()
     karaEnd: timedelta = timedelta()
 
-    style: Style = None
+    style: Optional[Style] = None
     _width: float = 0
     _left: float = 0
 
@@ -81,6 +81,9 @@ class KChar:
         return self.top + self.height
 
     def _calculate_sizing(self):
+        if not self.style:
+            raise StyleNotBoundException()
+
         fontScaler = FontScaler(self.style)
         self._width = fontScaler.get_length(self.char)
 
@@ -94,7 +97,7 @@ class KSyl:
     i: int
     line: KLine
 
-    style: Style = None
+    style: Optional[Style] = None
     _width: float = 0
     _preSpaceWidth: float = 0
     _postSpaceWidth: float = 0
@@ -175,6 +178,9 @@ class KSyl:
             sylAccLength += syllableCharLength
 
     def _calculate_sizing(self):
+        if not self.style:
+            raise StyleNotBoundException()
+
         fontScaler = FontScaler(self.style)
 
         text = self.text
@@ -212,10 +218,9 @@ class KLine:
     actorSwitches: list[tuple[timedelta, str]]
     isSecondary: bool
     isAlone: bool
-    isEN: bool
     lineNum: int
 
-    style: Style = None
+    style: Optional[Style] = None
     _width: float = 0
     _height: float = 0
     _left: float = 0
@@ -312,6 +317,9 @@ class KLine:
         self._calculate_positions()
 
     def _calculate_sizing(self):
+        if not self.style:
+            raise StyleNotBoundException()
+
         fontScaler = FontScaler(self.style)
 
         self._width = fontScaler.get_length(self.text)
@@ -321,6 +329,9 @@ class KLine:
             syl._calculate_sizing()
 
     def _calculate_positions(self, resX: int = 1920, resY: int = 1080):
+        if not self.style:
+            raise StyleNotBoundException()
+
         # Horizontal positioning
         if self.style.alignment in {
             pyass.Alignment.BOTTOM_LEFT,
@@ -387,17 +398,35 @@ class KLine:
             syl._calculate_positions(curX)
             curX += syl.preSpaceWidth + syl.width + syl.postSpaceWidth
 
+    @property
+    def isEN(self) -> bool:
+        return False
+
+
+@dataclass
+class RomajiKLine(KLine):
+    pass
+
+
+@dataclass(kw_only=True)
+class ENKLine(KLine):
+    romajiLine: RomajiKLine
+
+    @property
+    def isEN(self) -> bool:
+        return True
+
 
 class StyleNotBoundException(Exception):
     pass
 
 
-def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> KLine:
+def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
 
-    kLine = KLine(
+    kLine = RomajiKLine(
         start=line.start,
         end=line.end,
         kara=[],
@@ -409,7 +438,6 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> KLine:
         ],
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
-        isEN=False,
         lineNum=lineNum,
     )
 
@@ -451,11 +479,11 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> KLine:
     return kLine
 
 
-def to_en_k_line(line: SongLine, lineNum: int = 0) -> KLine:
+def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> ENKLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
-    kLineEN = KLine(
+    kLineEN = ENKLine(
         start=line.start,
         end=line.end,
         kara=[],
@@ -467,7 +495,7 @@ def to_en_k_line(line: SongLine, lineNum: int = 0) -> KLine:
         ],
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
-        isEN=True,
+        romajiLine=romajiLine,
         lineNum=lineNum,
     )
 

@@ -11,10 +11,9 @@ import sys
 
 from lyricsheets.ass import REQUIRED_STYLES, retrieve_effect
 from lyricsheets.cache import MemoryCache
+import lyricsheets.effect as _
 from lyricsheets.service import SongService, SongServiceByDB
 from lyricsheets.models import Modifiers
-
-import lyricsheets.effect
 
 SONG_STYLE_NAME = "Song"
 

@@ -22,7 +22,6 @@ class SongLineSyllable:
 @dataclass
 class SongLine:
     en: str = ""
-    karaokeEffect: Optional[str] = None
     isSecondary: bool = False
     start: timedelta = timedelta()
     end: timedelta = timedelta()
