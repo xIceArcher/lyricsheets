@@ -118,8 +118,11 @@ class KaraokeEffect(LyricsEffect):
         songLines: Sequence[SongLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        enLines = [to_en_k_line(line, to_romaji_k_line(line, i + 1), i + 1) for i, line in enumerate(songLines)]
-        return self.to_romaji_k_events(enLines, actorToStyle)
+        enLines = [
+            to_en_k_line(line, to_romaji_k_line(line, i + 1), i + 1)
+            for i, line in enumerate(songLines)
+        ]
+        return self.to_en_k_events(enLines, actorToStyle)
 
     @abstractmethod
     def to_romaji_k_events(
