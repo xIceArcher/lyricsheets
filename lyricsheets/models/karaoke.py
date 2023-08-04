@@ -24,6 +24,41 @@ class KChar:
     idxInSyl: int
     syl: KSyl
 
+    ### Property aliases to maintain compatibility with Aegisub variable namings
+    @property
+    def char(self) -> str:
+        return self.text
+
+    @char.setter
+    def char(self, char: str):
+        self.text = char
+
+    @property
+    def i(self) -> int:
+        return self.idxInLine
+
+    @i.setter
+    def i(self, i: int):
+        self.idxInLine = i
+
+    @property
+    def sylI(self) -> int:
+        return self.idxInSyl
+
+    @sylI.setter
+    def sylI(self, sylI: int):
+        self.idxInSyl = sylI
+
+    @property
+    def karaStart(self) -> timedelta:
+        return self.start
+
+    @property
+    def karaEnd(self) -> timedelta:
+        return self.end
+
+    ### End Aegisub compatibility variables
+
     @property
     def start(self) -> timedelta:
         return self.syl._charKaraTimes[self.idxInSyl]
@@ -93,6 +128,17 @@ class KSyl:
     inlineFx: str
     idxInLine: int
     line: KLine
+
+    ### Property aliases to maintain compatibility with Aegisub variable namings
+    @property
+    def i(self) -> int:
+        return self.idxInLine
+
+    @i.setter
+    def i(self, i: int):
+        self.idxInLine = i
+
+    ### End Aegisub compatibility variables
 
     @property
     def text(self) -> str:
@@ -193,6 +239,17 @@ class KLine:
     _resX: int = 1920
     resY: int = 1080
     _transitionDuration: timedelta = timedelta()
+
+    ### Property aliases to maintain compatibility with Aegisub variable namings
+    @property
+    def kara(self) -> list[KSyl]:
+        return self.syls
+
+    @kara.setter
+    def kara(self, kara: list[KSyl]):
+        self.syls = kara
+
+    ### End Aegisub compatibility variables
 
     @property
     def text(self) -> str:
