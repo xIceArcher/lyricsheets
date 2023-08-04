@@ -235,6 +235,7 @@ class KLine:
     isAlone: bool
     idxInSong: int
 
+    isEN: bool = False
     _style: Optional[pyass.Style] = None
     _resX: int = 1920
     resY: int = 1080
@@ -264,10 +265,6 @@ class KLine:
         return [char for k in self.syls for char in k.chars]
 
     @property
-    def isEN(self) -> bool:
-        return False
-
-    @property
     def style(self) -> pyass.Style:
         if not self._style:
             raise StyleNotBoundException()
@@ -276,6 +273,9 @@ class KLine:
 
     @style.setter
     def style(self, style: pyass.Style):
+        if self._style == style:
+            return
+
         # Invalidate cached properties
         self.__dict__.pop("width", None)
         self.__dict__.pop("_charFadeOffsets", None)
@@ -299,6 +299,9 @@ class KLine:
 
     @resX.setter
     def resX(self, resX: int):
+        if self._resX == resX:
+            return
+
         # Invalidate cached properties
         for syl in self.syls:
             syl.__dict__.pop("left", None)
@@ -314,6 +317,9 @@ class KLine:
 
     @transitionDuration.setter
     def transitionDuration(self, transitionDuration: timedelta):
+        if self._transitionDuration == transitionDuration:
+            return
+
         # Invalidate cached properties
         self.__dict__.pop("_charFadeOffsets", None)
 
@@ -436,30 +442,16 @@ class KLine:
         return list(accumulate(lineCharTimes, operator.add, initial=timedelta()))
 
 
-@dataclass
-class RomajiKLine(KLine):
-    pass
-
-
-@dataclass(kw_only=True)
-class ENKLine(KLine):
-    romajiLine: RomajiKLine
-
-    @property
-    def isEN(self) -> bool:
-        return True
-
-
 class StyleNotBoundException(Exception):
     pass
 
 
-def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> RomajiKLine:
+def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
 
-    kLine = RomajiKLine(
+    kLine = KLine(
         start=line.start,
         end=line.end,
         syls=[],
@@ -471,6 +463,7 @@ def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> RomajiKLine:
         ],
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
+        isEN=False,
         idxInSong=lineIdxInSong,
     )
 
@@ -511,11 +504,11 @@ def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> RomajiKLine:
     return kLine
 
 
-def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineIdxInSong: int = 0) -> ENKLine:
+def to_en_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
-    kLineEN = ENKLine(
+    kLineEN = KLine(
         start=line.start,
         end=line.end,
         syls=[],
@@ -527,7 +520,7 @@ def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineIdxInSong: int = 0
         ],
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
-        romajiLine=romajiLine,
+        isEN=True,
         idxInSong=lineIdxInSong,
     )
 

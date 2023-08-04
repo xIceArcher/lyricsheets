@@ -43,10 +43,7 @@ class LyricsEffect(Effect):
         return [
             self.to_divider_event(song, song.title.romaji),
             self.to_title_event(song, self.shouldPrintTitle),
-            self.to_divider_event(song, "Romaji"),
-            *self.to_romaji_events(song.lyrics, actorToStyle),
-            self.to_divider_event(song, "English"),
-            *self.to_en_events(song.lyrics, actorToStyle),
+            *self.to_lyrics_events(song, actorToStyle),
         ]
 
     def to_divider_event(self, song: Song, dividerText: str) -> pyass.Event:
@@ -86,43 +83,42 @@ class LyricsEffect(Effect):
         )
 
     @abstractmethod
-    def to_romaji_events(
-        self,
-        songLines: Sequence[SongLine],
-        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        ...
-
-    @abstractmethod
-    def to_en_events(
-        self,
-        songLines: Sequence[SongLine],
-        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    def to_lyrics_events(
+        self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
     ) -> Sequence[pyass.Event]:
         ...
 
 
 class KaraokeEffect(LyricsEffect):
+    def to_lyrics_events(
+        self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
+    ) -> Sequence[pyass.Event]:
+        return [
+            self.to_divider_event(song, "Romaji"),
+            *self.to_romaji_events(song.lyrics, actorToStyle),
+            self.to_divider_event(song, "English"),
+            *self.to_en_events(song.lyrics, actorToStyle),
+        ]
+
     def to_romaji_events(
         self,
         songLines: Sequence[SongLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        romajiLines = [
-            to_romaji_k_line(line, i + 1) for i, line in enumerate(songLines)
-        ]
-        return self.to_romaji_k_events(romajiLines, actorToStyle)
+        return self.to_romaji_k_events(
+            [to_romaji_k_line(line, i + 1) for i, line in enumerate(songLines)],
+            actorToStyle,
+        )
 
     def to_en_events(
         self,
         songLines: Sequence[SongLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        enLines = [
-            to_en_k_line(line, to_romaji_k_line(line, i + 1), i + 1)
-            for i, line in enumerate(songLines)
-        ]
-        return self.to_en_k_events(enLines, actorToStyle)
+        return self.to_en_k_events(
+            [to_en_k_line(line, i + 1) for i, line in enumerate(songLines)],
+            actorToStyle,
+        )
 
     @abstractmethod
     def to_romaji_k_events(
@@ -136,6 +132,42 @@ class KaraokeEffect(LyricsEffect):
     def to_en_k_events(
         self,
         songLines: Sequence[KLine],
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> Sequence[pyass.Event]:
+        ...
+
+
+class DependentKaraokeEffect(LyricsEffect):
+    def to_lyrics_events(
+        self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
+    ) -> Sequence[pyass.Event]:
+        romajiKLines = [
+            to_romaji_k_line(line, i + 1) for i, line in enumerate(song.lyrics)
+        ]
+
+        enKLines = [to_en_k_line(line, i + 1) for i, line in enumerate(song.lyrics)]
+
+        return [
+            self.to_divider_event(song, "Romaji"),
+            *self.to_romaji_k_events(romajiKLines, enKLines, actorToStyle),
+            self.to_divider_event(song, "English"),
+            *self.to_en_k_events(romajiKLines, enKLines, actorToStyle),
+        ]
+
+    @abstractmethod
+    def to_romaji_k_events(
+        self,
+        romajiLines: Sequence[KLine],
+        enLines: Sequence[KLine],
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> Sequence[pyass.Event]:
+        ...
+
+    @abstractmethod
+    def to_en_k_events(
+        self,
+        romajiLines: Sequence[KLine],
+        enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         ...

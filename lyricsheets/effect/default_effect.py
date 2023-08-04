@@ -183,7 +183,7 @@ def to_default_romaji_event(
 
 
 def to_default_en_event(
-    line: ENKLine,
+    line: KLine,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
     transitionDuration: timedelta,
@@ -243,13 +243,14 @@ def get_switch_syl_fade_offsets(
     return switchSylFadeOffsets
 
 
-class DefaultLiveKaraokeEffect(KaraokeEffect):
+class DefaultLiveKaraokeEffect(DependentKaraokeEffect):
     def to_romaji_k_events(
         self,
-        songLines: Sequence[KLine],
+        romajiLines: Sequence[KLine],
+        enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        for line in songLines:
+        for line in romajiLines:
             line.style = ROMAJI_STYLE
             line.transitionDuration = DEFAULT_TRANSITION_DURATION
 
@@ -261,38 +262,31 @@ class DefaultLiveKaraokeEffect(KaraokeEffect):
                 DEFAULT_TRANSITION_DURATION,
                 get_switch_syl_fade_offsets(line.actorSwitches, line.syls),
             )
-            for line in songLines
+            for line in romajiLines
         ]
 
     def to_en_k_events(
         self,
-        songLines: Sequence[KLine],
+        romajiLines: Sequence[KLine],
+        enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        def en_k_events_type_guard(
-            songLines: Sequence[KLine],
-        ) -> typing.TypeGuard[Sequence[ENKLine]]:
-            return all(isinstance(line, ENKLine) for line in songLines)
+        for romajiLine, enLine in zip(romajiLines, enLines):
+            romajiLine.style = ROMAJI_STYLE
+            romajiLine.transitionDuration = DEFAULT_TRANSITION_DURATION
 
-        if not en_k_events_type_guard(songLines):
-            raise ValueError()
-
-        for line in songLines:
-            line.style = EN_STYLE
-            line.transitionDuration = DEFAULT_TRANSITION_DURATION
-
-            line.romajiLine.style = ROMAJI_STYLE
-            line.romajiLine.transitionDuration = DEFAULT_TRANSITION_DURATION
+            enLine.style = EN_STYLE
+            enLine.transitionDuration = DEFAULT_TRANSITION_DURATION
 
         return [
             to_default_en_event(
-                line,
+                enLine,
                 actorToStyle,
                 DEFAULT_SWITCH_DURATION,
                 DEFAULT_TRANSITION_DURATION,
-                get_switch_syl_fade_offsets(line.actorSwitches, line.romajiLine.syls),
+                get_switch_syl_fade_offsets(enLine.actorSwitches, romajiLine.syls),
             )
-            for line in songLines
+            for romajiLine, enLine in zip(romajiLines, enLines)
         ]
 
 
