@@ -1,56 +1,91 @@
 from dataclasses import dataclass
 from datetime import timedelta
-from functools import reduce
+from functools import cached_property, reduce
+from itertools import accumulate
+import operator
 from typing import Optional, Sequence, TypeVar
+
+import pyass
 
 from lyricsheets.models import SongLine
 from lyricsheets.fonts import FontScaler
 
-import pyass
-from pyass import Style
 
 KChar = TypeVar("KChar", bound="KChar")
 KSyl = TypeVar("KSyl", bound="KSyl")
 KLine = TypeVar("KLine", bound="KLine")
 
 
-def style_check(func):
-    def style_wrapper(*args):
-        if not args[0].style:
-            raise StyleNotBoundException()
-        return func(*args)
-
-    return style_wrapper
-
-
 @dataclass
 class KChar:
-    char: str
-    i: int
-    sylI: int
+    text: str
+    idxInLine: int
     line: KLine
+    idxInSyl: int
     syl: KSyl
-    fadeOffset: timedelta = timedelta()
-    karaStart: timedelta = timedelta()
-    karaEnd: timedelta = timedelta()
 
-    style: Optional[Style] = None
-    _width: float = 0
-    _left: float = 0
+    ### Property aliases to maintain compatibility with Aegisub variable namings
+    @property
+    def char(self) -> str:
+        return self.text
+
+    @char.setter
+    def char(self, char: str):
+        self.text = char
 
     @property
-    def karaDuration(self) -> timedelta:
-        return self.karaEnd - self.karaStart
+    def i(self) -> int:
+        return self.idxInLine
+
+    @i.setter
+    def i(self, i: int):
+        self.idxInLine = i
 
     @property
-    @style_check
+    def sylI(self) -> int:
+        return self.idxInSyl
+
+    @sylI.setter
+    def sylI(self, sylI: int):
+        self.idxInSyl = sylI
+
+    @property
+    def karaStart(self) -> timedelta:
+        return self.start
+
+    @property
+    def karaEnd(self) -> timedelta:
+        return self.end
+
+    ### End Aegisub compatibility variables
+
+    @property
+    def start(self) -> timedelta:
+        return self.syl._charKaraTimes[self.idxInSyl]
+
+    @property
+    def end(self) -> timedelta:
+        return self.syl._charKaraTimes[self.idxInSyl + 1]
+
+    @property
+    def duration(self) -> timedelta:
+        return self.end - self.start
+
+    @property
+    def style(self) -> pyass.Style:
+        return self.line.style
+
+    @cached_property
     def width(self) -> float:
-        return self._width
+        return FontScaler(self.style).get_length(self.text)
 
-    @property
-    @style_check
+    @cached_property
     def left(self) -> float:
-        return self._left
+        if self.idxInLine == 0:
+            return self.line.left
+
+        prevChar = self.line.chars[self.idxInLine - 1]
+        return prevChar.left + prevChar.width
 
     @property
     def height(self) -> float:
@@ -66,11 +101,11 @@ class KChar:
 
     @property
     def center(self) -> float:
-        return self._left + self._width / 2
+        return self.left + self.width / 2
 
     @property
     def right(self) -> float:
-        return self._left + self._width
+        return self.left + self.width
 
     @property
     def middle(self) -> float:
@@ -80,12 +115,9 @@ class KChar:
     def bottom(self) -> float:
         return self.top + self.height
 
-    def _calculate_sizing(self):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        fontScaler = FontScaler(self.style)
-        self._width = fontScaler.get_length(self.char)
+    @property
+    def fadeOffset(self) -> timedelta:
+        return self.line._charFadeOffsets[self.idxInLine]
 
 
 @dataclass
@@ -94,42 +126,63 @@ class KSyl:
     end: timedelta
     chars: list[KChar]
     inlineFx: str
-    i: int
+    idxInLine: int
     line: KLine
 
-    style: Optional[Style] = None
-    _width: float = 0
-    _preSpaceWidth: float = 0
-    _postSpaceWidth: float = 0
-    _left: float = 0
+    ### Property aliases to maintain compatibility with Aegisub variable namings
+    @property
+    def i(self) -> int:
+        return self.idxInLine
+
+    @i.setter
+    def i(self, i: int):
+        self.idxInLine = i
+
+    ### End Aegisub compatibility variables
 
     @property
     def text(self) -> str:
-        return "".join(char.char for char in self.chars)
+        return "".join(char.text for char in self.chars)
 
     @property
     def duration(self) -> timedelta:
         return self.end - self.start
 
     @property
-    @style_check
+    def style(self) -> pyass.Style:
+        return self.line.style
+
+    @cached_property
     def width(self) -> float:
-        return self._width
+        return FontScaler(self.style).get_length(self.text.strip())
 
-    @property
-    @style_check
+    @cached_property
     def preSpaceWidth(self) -> float:
-        return self._preSpaceWidth
+        numPreSpaces = len(self.text) - len(self.text.lstrip())
+        return (
+            FontScaler(self.style).get_length(self.text[:numPreSpaces])
+            if numPreSpaces
+            else 0
+        )
 
-    @property
-    @style_check
+    @cached_property
     def postSpaceWidth(self) -> float:
-        return self._postSpaceWidth
+        numPostSpaces = len(self.text) - len(self.text.rstrip())
+        return (
+            FontScaler(self.style).get_length(self.text[-(numPostSpaces):])
+            if numPostSpaces
+            else 0
+        )
 
-    @property
-    @style_check
+    @cached_property
     def left(self) -> float:
-        return self._left
+        if self.idxInLine == 0:
+            return self.line.left + self.preSpaceWidth
+
+        prevSyl = self.line.syls[self.idxInLine - 1]
+        return (
+            prevSyl.left + prevSyl.width + prevSyl.postSpaceWidth + self.preSpaceWidth
+        )
 
     @property
     def height(self) -> float:
@@ -159,78 +212,49 @@ class KSyl:
     def bottom(self) -> float:
         return self.top + self.height
 
-    def calculate_char_kara_times(self, style: Style):
-        fontScaler = FontScaler(style)
-
+    @cached_property
+    def _charKaraTimes(self) -> list[timedelta]:
         syllableCharLengths = [
             timedelta(milliseconds=c * 10)
-            for c in fontScaler.split_by_rendered_width(
+            for c in FontScaler(self.style).split_by_rendered_width(
                 pyass.timedelta(self.duration).total_centiseconds(), self.text
             )
         ]
 
-        sylAccLength = self.start
-
-        for char, syllableCharLength in zip(self.chars, syllableCharLengths):
-            char.karaStart = sylAccLength
-            char.karaEnd = sylAccLength + syllableCharLength
-
-            sylAccLength += syllableCharLength
-
-    def _calculate_sizing(self):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        fontScaler = FontScaler(self.style)
-
-        text = self.text
-        stripped = text.strip()
-
-        numPreSpaces = len(text) - len(text.lstrip())
-        numPostSpaces = len(text) - len(text.rstrip())
-
-        self._width = fontScaler.get_length(stripped)
-        self._preSpaceWidth = (
-            fontScaler.get_length(text[:numPreSpaces]) if numPreSpaces else 0
-        )
-        self._postSpaceWidth = (
-            fontScaler.get_length(text[-(numPostSpaces):]) if numPostSpaces else 0
-        )
-
-        for char in self.chars:
-            char._calculate_sizing()
-
-    def _calculate_positions(self, curX: float):
-        self._left = curX + self.preSpaceWidth
-
-        curSylX = curX
-        for char in self.chars:
-            char._left = curSylX
-            curSylX += char._width
+        return list(accumulate(syllableCharLengths, operator.add, initial=self.start))
 
 
 @dataclass
 class KLine:
     start: timedelta
     end: timedelta
-    kara: list[KSyl]
+    syls: list[KSyl]
     startActor: str
     actorSwitches: list[tuple[timedelta, str]]
     isSecondary: bool
     isAlone: bool
-    lineNum: int
+    idxInSong: int
 
-    style: Optional[Style] = None
-    _width: float = 0
-    _height: float = 0
-    _left: float = 0
-    _top: float = 0
-    _x: float = 0
-    _y: float = 0
+    isEN: bool = False
+    _style: Optional[pyass.Style] = None
+    _resX: int = 1920
+    resY: int = 1080
+    _transitionDuration: timedelta = timedelta()
+
+    ### Property aliases to maintain compatibility with Aegisub variable namings
+    @property
+    def kara(self) -> list[KSyl]:
+        return self.syls
+
+    @kara.setter
+    def kara(self, kara: list[KSyl]):
+        self.syls = kara
+
+    ### End Aegisub compatibility variables
 
     @property
     def text(self) -> str:
-        return "".join(c.char for text in self.kara for c in text.chars)
+        return "".join(c.text for text in self.syls for c in text.chars)
 
     @property
     def duration(self) -> timedelta:
@@ -238,37 +262,157 @@ class KLine:
 
     @property
     def chars(self) -> Sequence[KChar]:
-        return [char for k in self.kara for char in k.chars]
+        return [char for k in self.syls for char in k.chars]
 
     @property
-    @style_check
+    def style(self) -> pyass.Style:
+        if not self._style:
+            raise StyleNotBoundException()
+
+        return self._style
+
+    @style.setter
+    def style(self, style: pyass.Style):
+        if self._style == style:
+            return
+
+        # Invalidate cached properties
+        self.__dict__.pop("width", None)
+        self.__dict__.pop("_charFadeOffsets", None)
+
+        for syl in self.syls:
+            syl.__dict__.pop("width", None)
+            syl.__dict__.pop("preSpaceWidth", None)
+            syl.__dict__.pop("postSpaceWidth", None)
+            syl.__dict__.pop("left", None)
+            syl.__dict__.pop("_charKaraTimes", None)
+
+        for char in self.chars:
+            char.__dict__.pop("width", None)
+            char.__dict__.pop("left", None)
+
+        self._style = style
+
+    @property
+    def resX(self) -> int:
+        return self._resX
+
+    @resX.setter
+    def resX(self, resX: int):
+        if self._resX == resX:
+            return
+
+        # Invalidate cached properties
+        for syl in self.syls:
+            syl.__dict__.pop("left", None)
+
+        for char in self.chars:
+            char.__dict__.pop("left", None)
+
+        self._resX = resX
+
+    @property
+    def transitionDuration(self) -> timedelta:
+        return self._transitionDuration
+
+    @transitionDuration.setter
+    def transitionDuration(self, transitionDuration: timedelta):
+        if self._transitionDuration == transitionDuration:
+            return
+
+        # Invalidate cached properties
+        self.__dict__.pop("_charFadeOffsets", None)
+
+        for syl in self.syls:
+            syl.__dict__.pop("_charKaraTimes", None)
+
+        self._transitionDuration = transitionDuration
+
+    @cached_property
     def width(self) -> float:
-        return self._width
+        return FontScaler(self.style).get_length(self.text)
 
     @property
-    @style_check
     def height(self) -> float:
-        return self._height
+        return self.style.fontSize
 
     @property
-    @style_check
     def left(self) -> float:
-        return self._left
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.TOP_LEFT,
+        }:
+            # Left aligned
+            return self.style.marginL
+        elif self.style.alignment in {
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.TOP,
+        }:
+            # Middle aligned
+            return (
+                self.resX + self.style.marginL - self.style.marginR - self.width
+            ) / 2
+        else:
+            # Right aligned
+            return self.resX - self.style.marginR - self.width
 
     @property
-    @style_check
     def top(self) -> float:
-        return self._top
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.BOTTOM_RIGHT,
+        }:
+            # Bottom aligned
+            return self.resY - self.style.marginV - self.height
+        elif self.style.alignment in {
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.CENTER_RIGHT,
+        }:
+            # Center aligned
+            return (
+                self.resY - self.style.marginV * 2 - self.height
+            ) / 2 + self.style.marginV
+        else:
+            # Top aligned
+            return self.style.marginV
 
     @property
-    @style_check
     def x(self) -> float:
-        return self._x
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.TOP_LEFT,
+        }:
+            return self.left
+        elif self.style.alignment in {
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.TOP,
+        }:
+            return self.center
+        else:
+            return self.right
 
     @property
-    @style_check
     def y(self) -> float:
-        return self._y
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.BOTTOM_RIGHT,
+        }:
+            return self.bottom
+        elif self.style.alignment in {
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.CENTER_RIGHT,
+        }:
+            return self.middle
+        else:
+            return self.top
 
     @property
     def center(self) -> float:
@@ -286,150 +430,31 @@ class KLine:
     def bottom(self) -> float:
         return self.top + self.height
 
-    def calculate_char_offsets(self, style: Style, transitionDuration: timedelta):
-        self.calculate_char_fade_offsets(style, transitionDuration)
-        for k in self.kara:
-            k.calculate_char_kara_times(style)
-
-    def calculate_char_fade_offsets(self, style: Style, transitionDuration: timedelta):
-        fontScaler = FontScaler(style)
-
+    @cached_property
+    def _charFadeOffsets(self) -> list[timedelta]:
         lineCharTimes = [
             timedelta(milliseconds=m)
-            for m in fontScaler.split_by_rendered_width(
-                pyass.timedelta(transitionDuration).total_milliseconds(), self.text
+            for m in FontScaler(self.style).split_by_rendered_width(
+                pyass.timedelta(self.transitionDuration).total_milliseconds(), self.text
             )
         ]
 
-        charAccTime = timedelta()
-        for char, lineCharTime in zip(self.chars, lineCharTimes):
-            char.fadeOffset = charAccTime
-            charAccTime += lineCharTime
-
-    def bind_style(self, style: Style):
-        self.style = style
-        for kara in self.kara:
-            kara.style = style
-            for char in kara.chars:
-                char.style = self.style
-
-        self._calculate_sizing()
-        self._calculate_positions()
-
-    def _calculate_sizing(self):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        fontScaler = FontScaler(self.style)
-
-        self._width = fontScaler.get_length(self.text)
-        self._height = self.style.fontSize
-
-        for syl in self.kara:
-            syl._calculate_sizing()
-
-    def _calculate_positions(self, resX: int = 1920, resY: int = 1080):
-        if not self.style:
-            raise StyleNotBoundException()
-
-        # Horizontal positioning
-        if self.style.alignment in {
-            pyass.Alignment.BOTTOM_LEFT,
-            pyass.Alignment.CENTER_LEFT,
-            pyass.Alignment.TOP_LEFT,
-        }:
-            # Left aligned
-            self._left = self.style.marginL
-            self._x = self.left
-        elif self.style.alignment in {
-            pyass.Alignment.BOTTOM,
-            pyass.Alignment.CENTER,
-            pyass.Alignment.TOP,
-        }:
-            # Centered
-            self._left = (
-                resX + self.style.marginL - self.style.marginR - self.width
-            ) / 2
-            self._x = self.center
-            # Left aligned
-            self._left = self.style.marginL
-            self._x = self.left
-        elif self.style.alignment in {
-            pyass.Alignment.BOTTOM,
-            pyass.Alignment.CENTER,
-            pyass.Alignment.TOP,
-        }:
-            # Centered
-            self._left = (
-                resX + self.style.marginL - self.style.marginR - self.width
-            ) / 2
-            self._x = self.center
-        else:
-            # Right aligned
-            self._left = resX - self.style.marginR - self.width
-            self._x = self.right
-
-        # Vertical positioning
-        if self.style.alignment in {
-            pyass.Alignment.BOTTOM_LEFT,
-            pyass.Alignment.BOTTOM,
-            pyass.Alignment.BOTTOM_RIGHT,
-        }:
-            # Bottom aligned
-            self._top = resY - self.style.marginV - self.height
-            self._y = self.bottom
-        elif self.style.alignment in {
-            pyass.Alignment.CENTER_LEFT,
-            pyass.Alignment.CENTER,
-            pyass.Alignment.CENTER_RIGHT,
-        }:
-            # Middle aligned
-            self._top = (
-                resY - self.style.marginV * 2 - self.height
-            ) / 2 + self.style.marginV
-            self._y = self.middle
-        else:
-            # Top aligned
-            self._top = self.style.marginV
-            self._y = self.top
-
-        curX = self.left
-        for syl in self.kara:
-            syl._calculate_positions(curX)
-            curX += syl.preSpaceWidth + syl.width + syl.postSpaceWidth
-
-    @property
-    def isEN(self) -> bool:
-        return False
-
-
-@dataclass
-class RomajiKLine(KLine):
-    pass
-
-
-@dataclass(kw_only=True)
-class ENKLine(KLine):
-    romajiLine: RomajiKLine
-
-    @property
-    def isEN(self) -> bool:
-        return True
+        return list(accumulate(lineCharTimes, operator.add, initial=timedelta()))
 
 
 class StyleNotBoundException(Exception):
     pass
 
 
-def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
+def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
 
-    kLine = RomajiKLine(
+    kLine = KLine(
         start=line.start,
         end=line.end,
-        kara=[],
+        syls=[],
         startActor=line.actors[0],
         actorSwitches=[
             (timedeltaUpToIdx[breakpoint], actor)
@@ -438,7 +463,8 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
         ],
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
-        lineNum=lineNum,
+        isEN=False,
+        idxInSong=lineIdxInSong,
     )
 
     accLength = timedelta()
@@ -456,15 +482,15 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
             end=accLength + syl.length,
             inlineFx=actor,
             chars=[],
-            i=len(kLine.kara),
+            idxInLine=len(kLine.syls),
             line=kLine,
         )
 
         for c in syl.text:
             kChar = KChar(
-                char=c,
-                i=totalChars,
-                sylI=len(kSyl.chars),
+                text=c,
+                idxInLine=totalChars,
+                idxInSyl=len(kSyl.chars),
                 syl=kSyl,
                 line=kLine,
             )
@@ -472,21 +498,20 @@ def to_romaji_k_line(line: SongLine, lineNum: int = 0) -> RomajiKLine:
             kSyl.chars.append(kChar)
             totalChars += 1
 
-        kLine.kara.append(kSyl)
-
+        kLine.syls.append(kSyl)
         accLength += syl.length
 
     return kLine
 
 
-def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> ENKLine:
+def to_en_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
-    kLineEN = ENKLine(
+    kLineEN = KLine(
         start=line.start,
         end=line.end,
-        kara=[],
+        syls=[],
         startActor=line.actors[0],
         actorSwitches=[
             (timedeltaUpToIdx[breakpoint], actor)
@@ -495,8 +520,8 @@ def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> E
         ],
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
-        romajiLine=romajiLine,
-        lineNum=lineNum,
+        isEN=True,
+        idxInSong=lineIdxInSong,
     )
 
     kSylEN = KSyl(
@@ -504,23 +529,20 @@ def to_en_k_line(line: SongLine, romajiLine: RomajiKLine, lineNum: int = 0) -> E
         end=line.start,
         chars=[],
         inlineFx="",
-        i=0,
+        idxInLine=0,
         line=kLineEN,
     )
 
     kSylEN.chars = [
         KChar(
-            char=char,
-            i=i,
-            karaStart=timedelta(),
-            karaEnd=timedelta(),
-            sylI=i,
+            text=char,
+            idxInLine=i,
+            idxInSyl=i,
             syl=kSylEN,
             line=kLineEN,
         )
         for i, char, in enumerate(line.en)
     ]
 
-    kLineEN.kara.append(kSylEN)
-
+    kLineEN.syls.append(kSylEN)
     return kLineEN

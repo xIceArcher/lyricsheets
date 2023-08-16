@@ -1,5 +1,7 @@
 from collections.abc import Sequence, Mapping
 from datetime import timedelta
+import functools
+import typing
 
 from ..ass.to_ass import *
 
@@ -39,7 +41,7 @@ def get_char_transform_tags(
 ) -> Sequence[pyass.Tag]:
     return [
         *startTag,
-        get_enter_transition_tag(kChar, switchDuration, transitionDuration, enterTag),
+        get_enter_transition_tag(kChar, switchDuration, enterTag),
         get_exit_transition_tag(kChar, switchDuration, transitionDuration, exitTag),
     ]
 
@@ -47,7 +49,6 @@ def get_char_transform_tags(
 def get_enter_transition_tag(
     kChar: KChar,
     switchDuration: timedelta,
-    transitionDuration: timedelta,
     resultTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0x00)],
 ) -> pyass.Tag:
     return pyass.TransformTag(
@@ -79,27 +80,16 @@ def get_exit_transition_tag(
 def get_char_actor_tag(
     kChar: KChar,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    switchDuration: timedelta,
+    switchSylFadeOffsets: Sequence[timedelta],
 ) -> Sequence[pyass.Tag]:
     if len(kChar.line.actorSwitches) == 0:
         return []
 
     ret = list(actorToStyle[kChar.line.startActor])
 
-    for time, actor in kChar.line.actorSwitches:
-        switchSylFadeOffset = timedelta()
-
-        if isinstance(kChar.line, ENKLine):
-            relevantLineKara = kChar.line.romajiLine.kara
-        else:
-            relevantLineKara = kChar.line.kara
-
-        # Find the KSyl at which this switch occurs
-        for syl in relevantLineKara:
-            if syl.start == time:
-                switchSylFadeOffset = syl.chars[0].fadeOffset
-                break
-
+    for (time, actor), switchSylFadeOffset in zip(
+        kChar.line.actorSwitches, switchSylFadeOffsets
+    ):
         ret.append(
             pyass.TransformTag(
                 start=time + kChar.fadeOffset - switchSylFadeOffset,
@@ -114,99 +104,204 @@ def get_char_actor_tag(
 def get_char_karaoke_tag(
     kChar: KChar, resultTag: Sequence[pyass.Tag] = []
 ) -> Sequence[pyass.Tag]:
-    if kChar.karaDuration == timedelta():
+    if kChar.duration == timedelta():
         return []
-    # Karaoke timing
-    if len(resultTag) == 0:
-        return [pyass.KaraokeTag(kChar.karaDuration)]
+    elif not resultTag:
+        return [pyass.KaraokeTag(kChar.duration)]
     else:
         return [
-            pyass.TransformTag(
-                start=kChar.karaStart, end=kChar.karaEnd, to=list(resultTag)
-            )
+            pyass.TransformTag(start=kChar.start, end=kChar.end, to=list(resultTag))
         ]
 
 
-def to_default_event(
+def get_syl_event_parts(
+    kSyl: KSyl,
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    switchDuration: timedelta,
+    transitionDuration: timedelta,
+    switchSylFadeOffsets: Sequence[timedelta],
+) -> Sequence[pyass.EventPart]:
+    return [
+        pyass.EventPart(
+            tags=[
+                *get_char_transform_tags(char, switchDuration, transitionDuration),
+                *get_char_actor_tag(char, actorToStyle, switchSylFadeOffsets),
+                *get_char_karaoke_tag(char),
+            ],
+            text=char.text,
+        )
+        for char in kSyl.chars
+    ]
+
+
+def to_default_romaji_event(
     line: KLine,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     switchDuration: timedelta,
     transitionDuration: timedelta,
+    switchSylFadeOffsets: Sequence[timedelta],
 ) -> pyass.Event:
-    if isinstance(line, ENKLine):
-        line.calculate_char_offsets(EN_STYLE, transitionDuration)
-        line.romajiLine.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
-    else:
-        line.calculate_char_offsets(ROMAJI_STYLE, transitionDuration)
-
-    # Generate line style tags
-    eventParts: list[pyass.EventPart] = [
-        pyass.EventPart(
-            tags=[
-                *LYRICS_TAGS,
-                get_en_pos_tag(line) if line.isEN else get_romaji_pos_tag(line),
-            ],
-        )
-    ]
-
-    # Set color if there's a constant actor
-    if len(line.actorSwitches) == 0:
-        eventParts.append(pyass.EventPart(tags=actorToStyle[line.startActor]))
-
-    # Leading switch duration
-    if not line.isEN:
-        eventParts.append(pyass.EventPart(tags=[pyass.KaraokeTag(switchDuration)]))
-
-    # Generate character style tags
-    for char in line.chars:
-        eventParts.append(
-            pyass.EventPart(
-                tags=[
-                    *get_char_transform_tags(char, switchDuration, transitionDuration),
-                    *get_char_actor_tag(char, actorToStyle, switchDuration),
-                    *get_char_karaoke_tag(char),
-                ],
-                text=char.char,
-            )
-        )
-
-    # Trailing switch duration
-    if not line.isEN:
-        eventParts.append(pyass.EventPart(tags=[pyass.KaraokeTag(switchDuration)]))
-
     return pyass.Event(
         format=get_line_format(line),
-        style=EN_STYLE.name if line.isEN else ROMAJI_STYLE.name,
+        style=ROMAJI_STYLE.name,
         start=line.start - switchDuration,
         end=line.end + switchDuration,
-        parts=eventParts,
+        parts=[
+            # Line style tag
+            pyass.EventPart(
+                tags=[
+                    *LYRICS_TAGS,
+                    get_romaji_pos_tag(line),
+                ],
+            ),
+            # Set color if there's a constant actor
+            *(
+                [pyass.EventPart(tags=actorToStyle[line.startActor])]
+                if not line.actorSwitches
+                else []
+            ),
+            # Leading switch duration
+            pyass.EventPart(tags=[pyass.KaraokeTag(switchDuration)]),
+            # Per syllable tags
+            *functools.reduce(
+                operator.concat,
+                [
+                    get_syl_event_parts(
+                        syl,
+                        actorToStyle,
+                        switchDuration,
+                        transitionDuration,
+                        switchSylFadeOffsets,
+                    )
+                    for syl in line.syls
+                ],
+            ),
+            # Trailing switch duration
+            pyass.EventPart(tags=[pyass.KaraokeTag(switchDuration)]),
+        ],
     )
 
 
-class DefaultLiveKaraokeEffect(KaraokeEffect):
+def to_default_en_event(
+    line: KLine,
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    switchDuration: timedelta,
+    transitionDuration: timedelta,
+    switchSylFadeOffsets: Sequence[timedelta],
+) -> pyass.Event:
+    return pyass.Event(
+        format=get_line_format(line),
+        style=EN_STYLE.name,
+        start=line.start - switchDuration,
+        end=line.end + switchDuration,
+        parts=[
+            pyass.EventPart(
+                tags=[
+                    *LYRICS_TAGS,
+                    get_en_pos_tag(line),
+                ],
+            ),
+            # Set color if there's a constant actor
+            *(
+                [pyass.EventPart(tags=actorToStyle[line.startActor])]
+                if not line.actorSwitches
+                else []
+            ),
+            # Per syllable tags
+            *functools.reduce(
+                operator.concat,
+                [
+                    get_syl_event_parts(
+                        syl,
+                        actorToStyle,
+                        switchDuration,
+                        transitionDuration,
+                        switchSylFadeOffsets,
+                    )
+                    for syl in line.syls
+                ],
+            ),
+        ],
+    )
+
+
+def get_switch_syl_fade_offsets(
+    actorSwitches: Sequence[tuple[timedelta, str]], syls: Sequence[KSyl]
+) -> Sequence[timedelta]:
+    switchSylFadeOffsets: list[timedelta] = []
+
+    for time, _ in actorSwitches:
+        # Find the KSyl at which this switch occurs
+        for syl in syls:
+            if syl.start == time:
+                switchSylFadeOffsets.append(syl.chars[0].fadeOffset)
+                break
+
+    if len(switchSylFadeOffsets) != len(actorSwitches):
+        raise ValueError("Could not find all switch syllables")
+
+    return switchSylFadeOffsets
+
+
+class DefaultLiveKaraokeEffect(DependentKaraokeEffect):
     def to_romaji_k_events(
         self,
-        songLines: Sequence[KLine],
+        romajiLines: Sequence[KLine],
+        enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         return [
-            to_default_event(
-                line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION
-            )
-            for line in songLines
+            self.to_romaji_k_event(romajiLine, enLine, actorToStyle)
+            for romajiLine, enLine in zip(romajiLines, enLines)
         ]
+
+    def to_romaji_k_event(
+        self,
+        romajiLine: KLine,
+        enLine: KLine,
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> pyass.Event:
+        romajiLine.style = ROMAJI_STYLE
+        romajiLine.transitionDuration = DEFAULT_TRANSITION_DURATION
+
+        return to_default_romaji_event(
+            romajiLine,
+            actorToStyle,
+            DEFAULT_SWITCH_DURATION,
+            DEFAULT_TRANSITION_DURATION,
+            get_switch_syl_fade_offsets(romajiLine.actorSwitches, romajiLine.syls),
+        )
 
     def to_en_k_events(
         self,
-        songLines: Sequence[KLine],
+        romajiLines: Sequence[KLine],
+        enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         return [
-            to_default_event(
-                line, actorToStyle, DEFAULT_SWITCH_DURATION, DEFAULT_TRANSITION_DURATION
-            )
-            for line in songLines
+            self.to_en_k_event(romajiLine, enLine, actorToStyle)
+            for romajiLine, enLine in zip(romajiLines, enLines)
         ]
+
+    def to_en_k_event(
+        self,
+        romajiLine: KLine,
+        enLine: KLine,
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> pyass.Event:
+        romajiLine.style = ROMAJI_STYLE
+        romajiLine.transitionDuration = DEFAULT_TRANSITION_DURATION
+
+        enLine.style = EN_STYLE
+        enLine.transitionDuration = DEFAULT_TRANSITION_DURATION
+
+        return to_default_en_event(
+            enLine,
+            actorToStyle,
+            DEFAULT_SWITCH_DURATION,
+            DEFAULT_TRANSITION_DURATION,
+            get_switch_syl_fade_offsets(enLine.actorSwitches, romajiLine.syls),
+        )
 
 
 register_effect("default_live_karaoke_effect", DefaultLiveKaraokeEffect())
