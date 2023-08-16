@@ -250,20 +250,27 @@ class DefaultLiveKaraokeEffect(DependentKaraokeEffect):
         enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        for line in romajiLines:
-            line.style = ROMAJI_STYLE
-            line.transitionDuration = DEFAULT_TRANSITION_DURATION
-
         return [
-            to_default_romaji_event(
-                line,
-                actorToStyle,
-                DEFAULT_SWITCH_DURATION,
-                DEFAULT_TRANSITION_DURATION,
-                get_switch_syl_fade_offsets(line.actorSwitches, line.syls),
-            )
-            for line in romajiLines
+            self.to_romaji_k_event(romajiLine, enLine, actorToStyle)
+            for romajiLine, enLine in zip(romajiLines, enLines)
         ]
+
+    def to_romaji_k_event(
+        self,
+        romajiLine: KLine,
+        enLine: KLine,
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> pyass.Event:
+        romajiLine.style = ROMAJI_STYLE
+        romajiLine.transitionDuration = DEFAULT_TRANSITION_DURATION
+
+        return to_default_romaji_event(
+            romajiLine,
+            actorToStyle,
+            DEFAULT_SWITCH_DURATION,
+            DEFAULT_TRANSITION_DURATION,
+            get_switch_syl_fade_offsets(romajiLine.actorSwitches, romajiLine.syls),
+        )
 
     def to_en_k_events(
         self,
@@ -271,23 +278,30 @@ class DefaultLiveKaraokeEffect(DependentKaraokeEffect):
         enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        for romajiLine, enLine in zip(romajiLines, enLines):
-            romajiLine.style = ROMAJI_STYLE
-            romajiLine.transitionDuration = DEFAULT_TRANSITION_DURATION
-
-            enLine.style = EN_STYLE
-            enLine.transitionDuration = DEFAULT_TRANSITION_DURATION
-
         return [
-            to_default_en_event(
-                enLine,
-                actorToStyle,
-                DEFAULT_SWITCH_DURATION,
-                DEFAULT_TRANSITION_DURATION,
-                get_switch_syl_fade_offsets(enLine.actorSwitches, romajiLine.syls),
-            )
+            self.to_en_k_event(romajiLine, enLine, actorToStyle)
             for romajiLine, enLine in zip(romajiLines, enLines)
         ]
+
+    def to_en_k_event(
+        self,
+        romajiLine: KLine,
+        enLine: KLine,
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    ) -> pyass.Event:
+        romajiLine.style = ROMAJI_STYLE
+        romajiLine.transitionDuration = DEFAULT_TRANSITION_DURATION
+
+        enLine.style = EN_STYLE
+        enLine.transitionDuration = DEFAULT_TRANSITION_DURATION
+
+        return to_default_en_event(
+            enLine,
+            actorToStyle,
+            DEFAULT_SWITCH_DURATION,
+            DEFAULT_TRANSITION_DURATION,
+            get_switch_syl_fade_offsets(enLine.actorSwitches, romajiLine.syls),
+        )
 
 
 register_effect("default_live_karaoke_effect", DefaultLiveKaraokeEffect())
