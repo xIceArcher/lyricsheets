@@ -17,12 +17,13 @@ def read_karaoke(events: Sequence[pyass.Event]) -> list[SongLine]:
             karaokeTags = [
                 tag for tag in part.tags if isinstance(tag, pyass.KaraokeTag)
             ]
-            if len(karaokeTags) != 1:
-                continue
-
-            syllables.append(
-                SongLineSyllable(length=karaokeTags[0].duration, text=part.text)
-            )
+            if len(karaokeTags) == 0:
+                # This entire part is a syllable, which might happen when the entire line has one syllable
+                syllables.append(SongLineSyllable(length=event.length, text=event.text))
+            elif len(karaokeTags) == 1:
+                syllables.append(
+                    SongLineSyllable(length=karaokeTags[0].duration, text=part.text)
+                )
 
         kTimeSum = functools.reduce(lambda a, b: a + b.length, syllables, timedelta())
 
