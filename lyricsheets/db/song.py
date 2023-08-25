@@ -165,7 +165,7 @@ class SongDB:
         return [
             self._parse_line(line, colorToActorMap)
             for line in itertools.islice(sheetData, 5, None, 1)
-            if "values" in line and "formattedValue" in line["values"][1]
+            if "values" in line and "formattedValue" in line["values"][0]
         ]
 
     def _parse_line(
@@ -175,7 +175,7 @@ class SongDB:
         timeAndSyllables = [
             syllable
             for syllable in values[self.sheetsClient.get_column_idx("I") :]
-            if "formattedValue" in syllable
+            if "formattedValue" in syllable or "userEnteredFormat" in syllable
         ]
 
         syllables: list[song.SongLineSyllable] = []
@@ -189,7 +189,7 @@ class SongDB:
             syllables.append(
                 song.SongLineSyllable(
                     timedelta(milliseconds=int(val1["formattedValue"]) * 10),
-                    val2["formattedValue"],
+                    val2.get("formattedValue", ""),
                 )
             )
 
@@ -203,7 +203,7 @@ class SongDB:
                 breakpoints.append(i)
 
         return song.SongLine(
-            en=values[self.sheetsClient.get_column_idx("B")]["formattedValue"],
+            en=values[self.sheetsClient.get_column_idx("B")].get("formattedValue", ""),
             isSecondary="formattedValue"
             in values[self.sheetsClient.get_column_idx("F")],
             start=self._parse_timedelta(
