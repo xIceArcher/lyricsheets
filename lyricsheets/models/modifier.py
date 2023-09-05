@@ -37,6 +37,7 @@ class LineModifier:
 
     retimeScaleFactor: float = 1
 
+
 @dataclass
 class Modifier:
     operation: str = ""
@@ -150,10 +151,11 @@ class Modifiers(list[Modifier]):
                 ):
                     ret[i].trim += trim
             elif modifier.operation == "title":
-                ret[0].shouldOverwriteTitle = True
-                ret[0].titleRomaji = modifier.rest[0]
-                if len(modifier.rest) > 1:
-                    ret[0].titleEN = modifier.rest[1]
+                if modifier.rest and modifier.rest[0] != "":
+                    ret[0].shouldOverwriteTitle = True
+                    ret[0].titleRomaji = modifier.rest[0]
+                    if len(modifier.rest) > 1:
+                        ret[0].titleEN = modifier.rest[1]
             elif modifier.operation == "artist":
                 ret[0].shouldOverwriteArtist = True
                 ret[0].artist = ", ".join([s.strip() for s in modifier.rest])
@@ -167,6 +169,6 @@ class Modifiers(list[Modifier]):
                     modifier.start,
                     modifier.end if modifier.end is not None else maxLines,
                 ):
-                    ret[i].retimeScaleFactor = originalBPM / newBPM 
+                    ret[i].retimeScaleFactor = originalBPM / newBPM
 
         return ret
