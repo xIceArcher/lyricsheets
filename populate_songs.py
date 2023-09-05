@@ -81,7 +81,7 @@ def populate_song(
         elif modifier.operation == "kfx":
             effectName = modifier.rest[0]
 
-    songEvents = retrieve_effect(effectName).to_events(song, actorToStyle)
+    songEvents = retrieve_effect(effectName).to_events(song, actorToStyle, shouldPrintTitle)
     songOffset = inEvent.start - song.start
 
     for event in songEvents:

@@ -17,7 +17,10 @@ TITLE_EVENT_DURATION = timedelta(seconds=5)
 class Effect(ABC):
     @abstractmethod
     def to_events(
-        self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
+        self,
+        song: Song,
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+        shouldPrintTitle: bool = True,
     ) -> Sequence[pyass.Event]:
         ...
 
@@ -25,24 +28,25 @@ class Effect(ABC):
 class LyricsEffect(Effect):
     def __init__(
         self,
-        shouldPrintTitle: bool = True,
         dividerStyle: pyass.Style = DIVIDER_STYLE,
         titleStyle: pyass.Style = TITLE_STYLE,
         titleEventDuration: timedelta = TITLE_EVENT_DURATION,
         titleCardTags: pyass.Tags = TITLE_CARD_TAGS,
     ) -> None:
-        self.shouldPrintTitle = shouldPrintTitle
         self.dividerStyle = dividerStyle
         self.titleStyle = titleStyle
         self.titleEventDuration = titleEventDuration
         self.titleCardTags = titleCardTags
 
     def to_events(
-        self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
+        self,
+        song: Song,
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+        shouldPrintTitle: bool = True,
     ) -> Sequence[pyass.Event]:
         return [
             self.to_divider_event(song, song.title.romaji),
-            self.to_title_event(song, self.shouldPrintTitle),
+            self.to_title_event(song, shouldPrintTitle),
             *self.to_lyrics_events(song, actorToStyle),
         ]
 
