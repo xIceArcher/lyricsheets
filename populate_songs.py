@@ -117,7 +117,7 @@ def populate_songs(
 
 def main():
     parser = argparse.ArgumentParser(description="Populate lyrics in an .ass file")
-    parser.add_argument("--fname", help="Path to input file(s)", nargs="+")
+    parser.add_argument("input_fnames", help="Path to input files", nargs="+")
     parser.add_argument(
         "--title",
         help="Whether to print the title",
@@ -142,7 +142,7 @@ def main():
         k: pyass.Tags.parse(v) for k, v in songService.get_all_format_tags().items()
     }
 
-    for file in args.fname:
+    for file in args.input_fnames:
         sys.path.append(os.path.dirname(file))
         with open(file, encoding="utf_8_sig") as inputFile:
             inputAss = pyass.load(inputFile)
