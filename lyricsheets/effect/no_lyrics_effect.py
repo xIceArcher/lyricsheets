@@ -5,7 +5,10 @@ from ..ass.to_ass import *
 
 class NoLyricsEffect(Effect):
     def to_events(
-        self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
+        self,
+        song: Song,
+        actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+        shouldPrintTitle: bool = True,
     ) -> Sequence[pyass.Event]:
         return []
 

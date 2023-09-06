@@ -13,7 +13,7 @@ from lyricsheets.ass import REQUIRED_STYLES, retrieve_effect
 from lyricsheets.cache import MemoryCache
 import lyricsheets.effect as _
 from lyricsheets.service import SongService, SongServiceByDB
-from lyricsheets.models import Modifiers
+from lyricsheets.models import Modifier, Modifiers
 
 SONG_STYLE_NAME = "Song"
 
@@ -60,9 +60,17 @@ def populate_song(
         if isinstance(tag, pyass.tag.UnknownTag)
         and tag.text.startswith("\\lyricsmodify")
     ]
-    allModifiers = functools.reduce(
+    allModifiers: Sequence[Modifier] = functools.reduce(
         lambda ls, x: ls + Modifiers.parse(x), modifierTags, []
     )
+    shouldOverwriteDefaultPrintTitle = any(
+        [
+            modifier.operation == "title"
+            and (not modifier.rest or modifier.rest[0] == "")
+            for modifier in allModifiers
+        ]
+    )
+    shouldPrintTitle ^= shouldOverwriteDefaultPrintTitle
 
     songName = inEvent.parts[0].text
     print(f"Populating {songName}")
@@ -81,7 +89,9 @@ def populate_song(
         elif modifier.operation == "kfx":
             effectName = modifier.rest[0]
 
-    songEvents = retrieve_effect(effectName).to_events(song, actorToStyle)
+    songEvents = retrieve_effect(effectName).to_events(
+        song, actorToStyle, shouldPrintTitle
+    )
     songOffset = inEvent.start - song.start
 
     for event in songEvents:
