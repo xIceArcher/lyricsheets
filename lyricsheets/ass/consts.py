@@ -59,6 +59,12 @@ REQUIRED_STYLES = [
     EN_STYLE,
 ]
 
+STYLE_FONT_NAME_TO_CHAR_WRAP_TAGS = {
+    ROMAJI_STYLE.fontName: {
+        "~": ([pyass.FontNameTag("Montserrat Bold")], [pyass.FontNameTag("")])
+    },
+}
+
 # Tags
 TITLE_CARD_TAGS = pyass.Tags(
     [

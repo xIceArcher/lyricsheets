@@ -1,7 +1,6 @@
 from collections.abc import Sequence, Mapping
 from datetime import timedelta
 import functools
-import typing
 
 from ..ass.to_ass import *
 
@@ -29,6 +28,17 @@ def get_romaji_pos_tag(line: KLine) -> pyass.Tag:
 
 def get_en_pos_tag(line: KLine) -> pyass.Tag:
     return SECONDARY_EN_POS_TAG if line.isSecondary else EN_POS_TAG
+
+
+def get_char_wrap_tags(
+    kChar: KChar,
+) -> tuple[Sequence[pyass.Tag], Sequence[pyass.Tag]]:
+    if kChar.style.fontName not in STYLE_FONT_NAME_TO_CHAR_WRAP_TAGS:
+        return ([], [])
+
+    return STYLE_FONT_NAME_TO_CHAR_WRAP_TAGS[kChar.style.fontName].get(
+        kChar.text, ([], [])
+    )
 
 
 def get_char_transform_tags(
@@ -114,6 +124,33 @@ def get_char_karaoke_tag(
         ]
 
 
+def get_char_event_parts(
+    kChar: KChar,
+    actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    switchDuration: timedelta,
+    transitionDuration: timedelta,
+    switchSylFadeOffsets: Sequence[timedelta],
+) -> Sequence[pyass.EventPart]:
+    charWrapStartTags, charWrapEndTags = get_char_wrap_tags(kChar)
+
+    ret = [
+        pyass.EventPart(
+            tags=[
+                *get_char_transform_tags(kChar, switchDuration, transitionDuration),
+                *get_char_actor_tag(kChar, actorToStyle, switchSylFadeOffsets),
+                *get_char_karaoke_tag(kChar),
+                *charWrapStartTags,
+            ],
+            text=kChar.text,
+        )
+    ]
+
+    if charWrapEndTags:
+        ret.append(pyass.EventPart(tags=charWrapEndTags))
+
+    return ret
+
+
 def get_syl_event_parts(
     kSyl: KSyl,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
@@ -122,15 +159,18 @@ def get_syl_event_parts(
     switchSylFadeOffsets: Sequence[timedelta],
 ) -> Sequence[pyass.EventPart]:
     return [
-        pyass.EventPart(
-            tags=[
-                *get_char_transform_tags(char, switchDuration, transitionDuration),
-                *get_char_actor_tag(char, actorToStyle, switchSylFadeOffsets),
-                *get_char_karaoke_tag(char),
-            ],
-            text=char.text,
-        )
-        for char in kSyl.chars
+        eventPart
+        for eventParts in [
+            get_char_event_parts(
+                char,
+                actorToStyle,
+                switchDuration,
+                transitionDuration,
+                switchSylFadeOffsets,
+            )
+            for char in kSyl.chars
+        ]
+        for eventPart in eventParts
     ]
 
 
