@@ -203,6 +203,7 @@ class SongDB:
                 breakpoints.append(i)
 
         return song.SongLine(
+            idxInSong=int(values[self.sheetsClient.get_column_idx("A")].get("formattedValue", "")),
             en=values[self.sheetsClient.get_column_idx("B")].get("formattedValue", ""),
             isSecondary="formattedValue"
             in values[self.sheetsClient.get_column_idx("F")],

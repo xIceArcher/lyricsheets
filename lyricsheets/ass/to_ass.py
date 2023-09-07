@@ -110,7 +110,7 @@ class KaraokeEffect(LyricsEffect):
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         return self.to_romaji_k_events(
-            [to_romaji_k_line(line, i + 1) for i, line in enumerate(songLines)],
+            [to_romaji_k_line(line) for line in songLines],
             actorToStyle,
         )
 
@@ -120,7 +120,7 @@ class KaraokeEffect(LyricsEffect):
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
         return self.to_en_k_events(
-            [to_en_k_line(line, i + 1) for i, line in enumerate(songLines)],
+            [to_en_k_line(line) for line in songLines],
             actorToStyle,
         )
 
@@ -146,10 +146,10 @@ class DependentKaraokeEffect(LyricsEffect):
         self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
     ) -> Sequence[pyass.Event]:
         romajiKLines = [
-            to_romaji_k_line(line, i + 1) for i, line in enumerate(song.lyrics)
+            to_romaji_k_line(line) for line in song.lyrics
         ]
 
-        enKLines = [to_en_k_line(line, i + 1) for i, line in enumerate(song.lyrics)]
+        enKLines = [to_en_k_line(line) for line in song.lyrics]
 
         return [
             self.to_divider_event(song, "Romaji"),

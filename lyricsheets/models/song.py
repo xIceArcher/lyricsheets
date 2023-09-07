@@ -21,6 +21,7 @@ class SongLineSyllable:
 
 @dataclass
 class SongLine:
+    idxInSong: int = -1
     en: str = ""
     isSecondary: bool = False
     start: timedelta = timedelta()
