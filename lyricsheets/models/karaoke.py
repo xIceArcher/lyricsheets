@@ -446,7 +446,7 @@ class StyleNotBoundException(Exception):
     pass
 
 
-def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
+def to_romaji_k_line(line: SongLine) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -464,7 +464,7 @@ def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
         isEN=False,
-        idxInSong=lineIdxInSong,
+        idxInSong=line.idxInSong,
     )
 
     accLength = timedelta()
@@ -504,7 +504,7 @@ def to_romaji_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
     return kLine
 
 
-def to_en_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
+def to_en_k_line(line: SongLine) -> KLine:
     timedeltaUpToIdx = reduce(
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
@@ -521,7 +521,7 @@ def to_en_k_line(line: SongLine, lineIdxInSong: int = 0) -> KLine:
         isSecondary=line.isSecondary,
         isAlone=line.romaji == line.en,
         isEN=True,
-        idxInSong=lineIdxInSong,
+        idxInSong=line.idxInSong,
     )
 
     kSylEN = KSyl(
