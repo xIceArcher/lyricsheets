@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
+import json
 import pyass
-from typing import Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 Modifier = TypeVar("Modifier", bound="Modifier")
 Modifiers = TypeVar("Modifiers", bound="Modifiers")
@@ -36,6 +37,9 @@ class LineModifier:
     newOrder: Optional[list[int]] = None
 
     retimeScaleFactor: float = 1
+
+    shouldOverwriteSourceLine: bool = False
+    overwriteObj: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -140,8 +144,6 @@ class Modifiers(list[Modifier]):
                         modifier.rest[2:],
                     )
                 )
-            elif modifier.operation == "templater":
-                ret[0].shouldRunKaraTemplater = True
             elif modifier.operation == "trim":
                 trim = pyass.timedelta.parse(modifier.rest[0])
 
@@ -170,5 +172,20 @@ class Modifiers(list[Modifier]):
                     modifier.end if modifier.end is not None else maxLines,
                 ):
                     ret[i].retimeScaleFactor = originalBPM / newBPM
+            elif modifier.operation == "overwrite":
+                # Curly braces are alerady use to open and close tags in the .ass format
+                # So these replacements are used so that we can use JSON in this modifier
+                OPEN_CURLY_BRACE_REPLACEMENT = "<<<"
+                CLOSE_CURLY_BRACE_REPLACEMENT = ">>>"
+
+                # The modifier parser above will split the rest of the arguments by commas
+                # So we need to join them back
+                jsonObj = json.loads(",".join(modifier.rest).replace(OPEN_CURLY_BRACE_REPLACEMENT, "{").replace(CLOSE_CURLY_BRACE_REPLACEMENT, "}"))
+                for i in range(
+                    modifier.start,
+                    modifier.end if modifier.end is not None else maxLines,
+                ):
+                    ret[i].shouldOverwriteSourceLine = True
+                    ret[i].overwriteObj = jsonObj
 
         return ret

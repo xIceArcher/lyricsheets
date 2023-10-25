@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Optional
+from typing import Any
 
 from dataclass_wizard import JSONWizard
 
@@ -20,7 +20,7 @@ class SongLineSyllable:
 
 
 @dataclass
-class SongLine:
+class SongLine(JSONWizard):
     idxInSong: int = -1
     en: str = ""
     isSecondary: bool = False
@@ -37,6 +37,23 @@ class SongLine:
     @property
     def romaji(self) -> str:
         return "".join([syllable.text for syllable in self.syllables])
+
+    def merge(self, other: dict[str, Any]) -> None:
+        # This method cannot directly take a SongLine
+        # Since we would then be unable to determine whether the field doesn't exist (e.g. isSecondary: null)
+        # vs the field is its default value (e.g. isSecondary: false)
+        otherObj = SongLine().from_dict(other)
+        for key in [
+            "en",
+            "isSecondary",
+            "start",
+            "end",
+            "syllables",
+            "actors",
+            "breakpoints",
+        ]:
+            if key in other:
+                setattr(self, key, getattr(otherObj, key))
 
 
 @dataclass
@@ -74,9 +91,31 @@ class Song(JSONWizard):
         lineModifiers = modifiers.toLineModifiers(maxLines=len(self.lyrics))
         outLyrics = []
         for line, modifier in zip(self.lyrics, lineModifiers):
+            # Song-related modifiers
+            if modifier.shouldOverwriteTitle:
+                self.title.romaji = modifier.titleRomaji
+                self.title.en = modifier.titleEN
+
+            if modifier.shouldOverwriteArtist:
+                self.creators.artist = modifier.artist
+
+            # If discard, do nothing
+            if modifier.shouldDiscard:
+                continue
+
+            # Line display-related modifiers
             if modifier.shouldForceSecondary:
                 line.isSecondary = True
 
+            if modifier.shouldOverwriteStyle:
+                line.breakpoints = modifier.breakpoints
+                line.actors = modifier.actors
+
+            # Source line modifiers
+            if modifier.shouldOverwriteSourceLine:
+                line.merge(modifier.overwriteObj)
+
+            # Timing modifiers
             if modifier.shouldOverwriteKaraoke:
                 line.start = modifier.start + modifier.offset
                 line.end = modifier.end + modifier.offset
@@ -91,20 +130,6 @@ class Song(JSONWizard):
                 line.start += modifier.offset
                 line.end += modifier.offset - modifier.trim
                 line.syllables[-1].length -= modifier.trim
-
-            if modifier.shouldOverwriteStyle:
-                line.breakpoints = modifier.breakpoints
-                line.actors = modifier.actors
-
-            if modifier.shouldOverwriteTitle:
-                self.title.romaji = modifier.titleRomaji
-                self.title.en = modifier.titleEN
-
-            if modifier.shouldOverwriteArtist:
-                self.creators.artist = modifier.artist
-
-            if modifier.shouldDiscard:
-                continue
 
             outLyrics.append(line)
 
