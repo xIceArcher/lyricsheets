@@ -175,7 +175,13 @@ class SongDB:
         timeAndSyllables = [
             syllable
             for syllable in values[self.sheetsClient.get_column_idx("I") :]
-            if "formattedValue" in syllable or "userEnteredFormat" in syllable
+            if "formattedValue" in syllable
+            or (
+                "userEnteredFormat" in syllable
+                and not self.sheetsClient.is_white(
+                    syllable["userEnteredFormat"]["backgroundColor"]
+                )
+            )
         ]
 
         syllables: list[song.SongLineSyllable] = []
@@ -203,7 +209,9 @@ class SongDB:
                 breakpoints.append(i)
 
         return song.SongLine(
-            idxInSong=int(values[self.sheetsClient.get_column_idx("A")].get("formattedValue", "")),
+            idxInSong=int(
+                values[self.sheetsClient.get_column_idx("A")].get("formattedValue", "")
+            ),
             en=values[self.sheetsClient.get_column_idx("B")].get("formattedValue", ""),
             isSecondary="formattedValue"
             in values[self.sheetsClient.get_column_idx("F")],
