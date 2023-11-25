@@ -14,3 +14,6 @@ class RedisCache(Cache):
 
     def set(self, key: str, val: bytes):
         self.cache.set(key, val)
+
+    def delete(self, key: str):
+        self.cache.delete(key)

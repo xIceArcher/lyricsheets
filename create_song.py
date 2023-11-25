@@ -39,7 +39,7 @@ def main():
         config["default"],
     )
 
-    songService.save_song(song, args.group)
+    songService.create_song(song, args.group)
 
 
 if __name__ == "__main__":
