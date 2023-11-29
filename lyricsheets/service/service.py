@@ -22,5 +22,9 @@ class SongService:
         ...
 
     @abstractmethod
-    def save_song(self, song: Song, group: str = ""):
+    def create_song(self, song: Song, group: str = ""):
+        ...
+
+    @abstractmethod
+    def update_song_karaoke(self, song: Song):
         ...

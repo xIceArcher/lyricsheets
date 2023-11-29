@@ -33,16 +33,14 @@ class SongServiceByDB(SongService):
 
     @with_cache("SongServiceByDB::get_song")
     def get_song(self, songName: str) -> Song:
-
         songKeyToFind = self._to_song_key(songName)
-
-        if songKeyToFind in self.songMappings:
-            group = self.songMappings[songKeyToFind]["group"]
-            existingSongName = self.songMappings[songKeyToFind]["name"]
-            spreadsheetId = self.groupToSpreadsheetIds.get(group, self.defaultSpreadsheetId)
-            return self.service.get_song(spreadsheetId, existingSongName)
-        else:
+        if songKeyToFind not in self.songMappings:
             raise NotFoundError(songName)
+
+        group = self.songMappings[songKeyToFind]["group"]
+        existingSongName = self.songMappings[songKeyToFind]["name"]
+        spreadsheetId = self.groupToSpreadsheetIds.get(group, self.defaultSpreadsheetId)
+        return self.service.get_song(spreadsheetId, existingSongName)
 
     def _to_song_key(self, songName: str):
         return "".join(
@@ -64,7 +62,12 @@ class SongServiceByDB(SongService):
             for actor, style in self.get_format_tags(group).items()
         }
 
-    def save_song(self, song: Song, group: str = ""):
+    def create_song(self, song: Song, group: str = ""):
         spreadsheetId = self.groupToSpreadsheetIds.get(group, self.defaultSpreadsheetId)
+        self.service.create_song(spreadsheetId, song)
 
-        self.service.save_song(spreadsheetId, song)
+    def update_song_karaoke(self, song: Song):
+        songKey = self._to_song_key(song.title.romaji)
+        group = self.songMappings[songKey]["group"]
+        spreadsheetId = self.groupToSpreadsheetIds.get(group, self.defaultSpreadsheetId)
+        self.service.update_song_karaoke(spreadsheetId, song)

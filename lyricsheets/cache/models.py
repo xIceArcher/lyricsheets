@@ -11,6 +11,9 @@ class Cache(ABC):
     def set(self, key: str, val: bytes):
         ...
 
+    @abstractmethod
+    def delete(self, key: str):
+        ...
 
 class Cacheable(Protocol):
     cache: Cache

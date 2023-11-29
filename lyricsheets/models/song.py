@@ -69,8 +69,8 @@ class Song(JSONWizard):
     class _(JSONWizard.Meta):
         skip_defaults = True
 
-    title: SongTitle = SongTitle()
-    creators: SongCreators = SongCreators()
+    title: SongTitle = field(default_factory=SongTitle)
+    creators: SongCreators = field(default_factory=SongCreators)
     lyrics: list[SongLine] = field(default_factory=list)
 
     @property

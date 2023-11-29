@@ -27,7 +27,7 @@ class SongTemplateDB:
         self.cache = cache
 
     @with_cache("SongTemplateDB::get_sheet_name_to_id_map")
-    def get_sheet_name_to_id_map(self, spreadsheetId: str) -> Mapping[str, str]:
+    def get_sheet_name_to_id_map(self, spreadsheetId: str) -> Mapping[str, int]:
         resp = self.sheetsClient.get(
             spreadsheetId,
             fields="sheets.properties",
@@ -107,17 +107,23 @@ class SongDB:
 
     @with_cache("SongDB::get_song")
     def get_song(self, spreadsheetId: str, songName: str) -> song.Song:
+        return self._parse_song(
+            spreadsheetId, self._get_song_data(spreadsheetId, songName)
+        )
+
+    def _get_song_data(self, spreadsheetId: str, songName: str):
         resp = self.sheetsClient.get(
             spreadsheetId,
             ranges=[f"'{songName}'"],
             fields="sheets.data.rowData.values(formattedValue,userEnteredFormat(backgroundColor,textFormat.foregroundColor))",
         )
-        data = resp["sheets"][0]["data"][0]["rowData"]
+        return resp["sheets"][0]["data"][0]["rowData"]
 
+    def _parse_song(self, spreadsheetId: str, sheetData) -> song.Song:
         return song.Song(
-            title=self._parse_title(data),
-            creators=self._parse_creators(data),
-            lyrics=list(self._parse_lyrics(spreadsheetId, data)),
+            title=self._parse_title(sheetData),
+            creators=self._parse_creators(sheetData),
+            lyrics=list(self._parse_lyrics(spreadsheetId, sheetData)),
         )
 
     def _parse_title(self, sheetData) -> song.SongTitle:
@@ -233,19 +239,19 @@ class SongDB:
 
         return timedelta(hours=hrs, minutes=mins, seconds=secs, milliseconds=cs * 10)
 
-    def save_song(self, spreadsheetId: str, song: Song):
-        self._create_song(spreadsheetId, song.title)
+    def create_song(self, spreadsheetId: str, song: Song):
+        self._create_song_sheet(spreadsheetId, song.title)
 
-        self._save_title(spreadsheetId, song.title.romaji, song.title)
-        self._save_creators(spreadsheetId, song.title.romaji, song.creators)
-        self._save_english(spreadsheetId, song.title.romaji, song.lyrics)
-        self._save_is_secondary(spreadsheetId, song.title.romaji, song.lyrics)
-        self._save_line_times(spreadsheetId, song.title.romaji, song.lyrics)
-        self._save_line_karaoke(spreadsheetId, song.title.romaji, song.lyrics)
-        self._save_romaji(spreadsheetId, song.title.romaji, song.lyrics)
-        self._save_line_actors(spreadsheetId, song.title.romaji, song.lyrics)
+        self._create_title(spreadsheetId, song.title.romaji, song.title)
+        self._create_creators(spreadsheetId, song.title.romaji, song.creators)
+        self._create_english(spreadsheetId, song.title.romaji, song.lyrics)
+        self._create_is_secondary(spreadsheetId, song.title.romaji, song.lyrics)
+        self._create_line_times(spreadsheetId, song.title.romaji, song.lyrics)
+        self._create_line_karaoke(spreadsheetId, song.title.romaji, song.lyrics)
+        self._create_romaji(spreadsheetId, song.title.romaji, song.lyrics)
+        self._create_line_actors(spreadsheetId, song.title.romaji, song.lyrics)
 
-    def _create_song(self, spreadsheetId: str, songTitle: SongTitle):
+    def _create_song_sheet(self, spreadsheetId: str, songTitle: SongTitle):
         sheetNameToId = self.songTemplateDB.get_sheet_name_to_id_map(spreadsheetId)
 
         self.sheetsClient.batch_update(
@@ -264,7 +270,7 @@ class SongDB:
             ],
         )
 
-    def _save_title(self, spreadsheetId: str, sheetName: str, songTitle: SongTitle):
+    def _create_title(self, spreadsheetId: str, sheetName: str, songTitle: SongTitle):
         self.sheetsClient.append_values(
             spreadsheetId,
             range=f"{sheetName}!B1",
@@ -274,7 +280,7 @@ class SongDB:
             ],
         )
 
-    def _save_creators(
+    def _create_creators(
         self, spreadsheetId: str, sheetName: str, songCreators: SongCreators
     ):
         if songCreators == SongCreators():
@@ -291,7 +297,7 @@ class SongDB:
             ],
         )
 
-    def _save_english(
+    def _create_english(
         self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
     ):
         if len([line.en for line in songLines if line.en != ""]) == 0:
@@ -303,7 +309,7 @@ class SongDB:
             values=[[line.en] for line in songLines],
         )
 
-    def _save_is_secondary(
+    def _create_is_secondary(
         self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
     ):
         if len([line.isSecondary for line in songLines if line.isSecondary]) == 0:
@@ -315,7 +321,7 @@ class SongDB:
             values=[["U"] if line.isSecondary else [] for line in songLines],
         )
 
-    def _save_line_times(
+    def _create_line_times(
         self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
     ):
         if (
@@ -339,7 +345,7 @@ class SongDB:
             ],
         )
 
-    def _save_line_karaoke(
+    def _create_line_karaoke(
         self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
     ):
         if all([len(line.syllables) == 0 for line in songLines]):
@@ -364,7 +370,7 @@ class SongDB:
             ],
         )
 
-    def _save_line_actors(
+    def _create_line_actors(
         self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
     ):
         if all([len(line.actors) == 0 for line in songLines]):
@@ -407,7 +413,7 @@ class SongDB:
 
         self.sheetsClient.batch_update(spreadsheetId, requests=requests)
 
-    def _save_romaji(
+    def _create_romaji(
         self, spreadsheetId: str, sheetName: str, songLines: Sequence[SongLine]
     ):
         rootPos = "E6"
@@ -424,6 +430,247 @@ class SongDB:
             ],
             valueInputOption=GoogleSheetsClient.ValueInputOption.USER_ENTERED,
         )
+
+    def update_song_karaoke(self, spreadsheetId: str, newSong: Song):
+        if len(newSong.lyrics) == 0:
+            return []
+
+        sheetName = newSong.title.romaji
+        oldSongData = self._get_song_data(spreadsheetId, sheetName)
+        oldSong = self._parse_song(spreadsheetId, oldSongData)
+
+        if len(oldSong.lyrics) != len(newSong.lyrics):
+            raise NotImplementedError("Number of lines do not match")
+
+        sheetId = self.songTemplateDB.get_sheet_name_to_id_map(spreadsheetId)[sheetName]
+        lineIdxToRowIdx = self._get_line_idx_to_row_idx_map(oldSongData)
+        formatMap = self.songTemplateDB.get_format_map(spreadsheetId)
+
+        requests = [
+            *self._get_update_line_times_requests(
+                sheetId, lineIdxToRowIdx, oldSong.lyrics, newSong.lyrics
+            ),
+            *self._get_update_line_karaoke_requests(
+                sheetId, lineIdxToRowIdx, formatMap, oldSong.lyrics, newSong.lyrics
+            ),
+        ]
+
+        if len(requests) > 0:
+            self.sheetsClient.batch_update(spreadsheetId, requests)
+
+            if self.cache is not None:
+                self.cache.delete(f"SongDB::get_song:{spreadsheetId}:{sheetName}")
+
+    def _get_update_line_times_requests(
+        self,
+        sheetId: int,
+        lineIdxToRowIdx: Sequence[int],
+        oldSongLines: Sequence[SongLine],
+        newSongLines: Sequence[SongLine],
+    ) -> Sequence[Mapping[str, Any]]:
+        requests = []
+        for idx, (oldLine, newLine) in enumerate(zip(oldSongLines, newSongLines)):
+            if oldLine.start != newLine.start:
+                requests.append(
+                    self._get_update_cell_value_request(
+                        sheetId,
+                        lineIdxToRowIdx[idx],
+                        self.sheetsClient.get_column_idx("G"),
+                        {"stringValue": self._format_timedelta(newLine.start)},
+                    )
+                )
+            if oldLine.end != newLine.end:
+                requests.append(
+                    self._get_update_cell_value_request(
+                        sheetId,
+                        lineIdxToRowIdx[idx],
+                        self.sheetsClient.get_column_idx("H"),
+                        {"stringValue": self._format_timedelta(newLine.end)},
+                    )
+                )
+
+        return requests
+
+    def _get_update_line_karaoke_requests(
+        self,
+        sheetId: int,
+        lineIdxToRowIdx: Sequence[int],
+        formatMap: Mapping[str, Any],
+        oldSongLines: Sequence[SongLine],
+        newSongLines: Sequence[SongLine],
+    ) -> Sequence[Mapping[str, Any]]:
+        requests = []
+        for lineIdx, (oldLine, newLine) in enumerate(zip(oldSongLines, newSongLines)):
+            if oldLine.romaji != newLine.romaji:
+                raise NotImplementedError(f"Line {lineIdx + 1} romaji does not match")
+
+            if oldLine.syllables == newLine.syllables:
+                continue
+
+            # Derive the actor for each char in the old line
+            oldLine.breakpoints.append(len(oldLine.syllables))
+            oldSyllableToActor = []
+            for i in range(len(oldLine.breakpoints) - 1):
+                numSyllables = oldLine.breakpoints[i + 1] - oldLine.breakpoints[i]
+                oldSyllableToActor.extend(
+                    [oldLine.actors[i] for _ in range(numSyllables)]
+                )
+
+            charToActor = []
+            for actor, newSyllable in zip(oldSyllableToActor, oldLine.syllables):
+                charToActor.extend([actor for _ in range(len(newSyllable.text))])
+
+            # Use the actor of each char to try to derive a unique actor for each new syllable
+            # Fail if this cannot be done
+            newSyllableToActor = []
+            currCharIdx = 0
+            for newSyllable in newLine.syllables:
+                actors = set(
+                    charToActor[currCharIdx : currCharIdx + len(newSyllable.text)]
+                )
+
+                if len(actors) != 1:
+                    raise NotImplementedError(
+                        f"Syllable '{newSyllable.text}' in line {lineIdx + 1} does not have a unique actor, actors: {actors}"
+                    )
+
+                newSyllableToActor.append(list(actors)[0])
+                currCharIdx += len(newSyllable.text)
+
+            for syllableIdx, (
+                oldSyllable,
+                oldActor,
+                newSyllable,
+                newActor,
+            ) in enumerate(
+                itertools.zip_longest(
+                    oldLine.syllables,
+                    oldSyllableToActor,
+                    newLine.syllables,
+                    newSyllableToActor,
+                )
+            ):
+                if newSyllable is None:
+                    # Old line had more syllables, blank out the extra cells
+                    requests.append(
+                        self._get_clear_cell_request(
+                            sheetId,
+                            lineIdxToRowIdx[lineIdx],
+                            self.sheetsClient.get_column_idx("I") + 2 * syllableIdx,
+                        )
+                    )
+                    requests.append(
+                        self._get_clear_cell_request(
+                            sheetId,
+                            lineIdxToRowIdx[lineIdx],
+                            self.sheetsClient.get_column_idx("J") + 2 * syllableIdx,
+                        )
+                    )
+                    continue
+
+                if oldSyllable is None or oldSyllable.length != newSyllable.length:
+                    requests.append(
+                        self._get_update_cell_value_request(
+                            sheetId,
+                            lineIdxToRowIdx[lineIdx],
+                            self.sheetsClient.get_column_idx("I") + 2 * syllableIdx,
+                            {
+                                "numberValue": int(
+                                    newSyllable.length.total_seconds() * 100
+                                )
+                            },
+                        )
+                    )
+
+                if oldSyllable is None or oldSyllable.text != newSyllable.text:
+                    requests.append(
+                        self._get_update_cell_value_request(
+                            sheetId,
+                            lineIdxToRowIdx[lineIdx],
+                            self.sheetsClient.get_column_idx("J") + 2 * syllableIdx,
+                            {"stringValue": newSyllable.text},
+                        )
+                    )
+
+                if oldSyllable is None or oldActor != newActor:
+                    requests.append(
+                        self._get_update_cell_format_request(
+                            sheetId,
+                            lineIdxToRowIdx[lineIdx],
+                            self.sheetsClient.get_column_idx("I") + 2 * syllableIdx,
+                            formatMap[newActor],
+                        )
+                    )
+
+                    requests.append(
+                        self._get_update_cell_format_request(
+                            sheetId,
+                            lineIdxToRowIdx[lineIdx],
+                            self.sheetsClient.get_column_idx("J") + 2 * syllableIdx,
+                            formatMap[newActor],
+                        )
+                    )
+
+        return requests
+
+    def _get_update_cell_value_request(
+        self, sheetId: int, rowIdx: int, colIdx: int, userEnteredValue: dict[str, Any]
+    ) -> Mapping[str, Any]:
+        return {
+            "updateCells": {
+                "rows": [{"values": [{"userEnteredValue": userEnteredValue}]}],
+                "fields": "userEnteredValue",
+                "start": {
+                    "sheetId": sheetId,
+                    "rowIndex": rowIdx,
+                    "columnIndex": colIdx,
+                },
+            }
+        }
+
+    def _get_update_cell_format_request(
+        self, sheetId: int, rowIdx: int, colIdx: int, userEnteredFormat: dict[str, Any]
+    ) -> Mapping[str, Any]:
+        return {
+            "updateCells": {
+                "rows": [{"values": [{"userEnteredFormat": userEnteredFormat}]}],
+                "fields": "userEnteredFormat(backgroundColor,textFormat.foregroundColor)",
+                "start": {
+                    "sheetId": sheetId,
+                    "rowIndex": rowIdx,
+                    "columnIndex": colIdx,
+                },
+            }
+        }
+
+    def _get_clear_cell_request(
+        self,
+        sheetId: int,
+        rowIdx: int,
+        colIdx: int,
+    ) -> Mapping[str, Any]:
+        return {
+            "updateCells": {
+                "rows": [
+                    {"values": [{"userEnteredValue": {}, "userEnteredFormat": {}}]}
+                ],
+                "fields": "userEnteredValue,userEnteredFormat(backgroundColor,textFormat.foregroundColor)",
+                "start": {
+                    "sheetId": sheetId,
+                    "rowIndex": rowIdx,
+                    "columnIndex": colIdx,
+                },
+            }
+        }
+
+    def _get_line_idx_to_row_idx_map(self, sheetData) -> Sequence[int]:
+        ret = []
+
+        for row in range(5, len(sheetData)):
+            if "formattedValue" in sheetData[row]["values"][0]:
+                ret.append(row)
+
+        return ret
 
     def _format_timedelta(self, td: timedelta) -> str:
         hours, remainder = td.total_seconds() // 3600, td.total_seconds() % 3600

@@ -15,3 +15,6 @@ class MemoryCache(Cache):
 
     def set(self, key: str, val: bytes):
         self.cache[key] = val
+
+    def delete(self, key: str):
+        del self.cache[key]
