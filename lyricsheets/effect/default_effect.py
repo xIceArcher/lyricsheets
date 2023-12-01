@@ -53,7 +53,7 @@ def get_char_transform_tags(
         *startTag,
         get_enter_transition_tag(kChar, switchDuration, enterTag),
         get_exit_transition_tag(kChar, switchDuration, transitionDuration, exitTag),
-    ]
+    ] if switchDuration != timedelta(0) else []
 
 
 def get_enter_transition_tag(
