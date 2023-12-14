@@ -41,6 +41,8 @@ class LineModifier:
     shouldOverwriteSourceLine: bool = False
     overwriteObj: dict[str, Any] = field(default_factory=dict)
 
+    dupes: Optional[list[timedelta]] = None
+
 
 @dataclass
 class Modifier:
@@ -180,12 +182,28 @@ class Modifiers(list[Modifier]):
 
                 # The modifier parser above will split the rest of the arguments by commas
                 # So we need to join them back
-                jsonObj = json.loads(",".join(modifier.rest).replace(OPEN_CURLY_BRACE_REPLACEMENT, "{").replace(CLOSE_CURLY_BRACE_REPLACEMENT, "}"))
+                jsonObj = json.loads(
+                    ",".join(modifier.rest)
+                    .replace(OPEN_CURLY_BRACE_REPLACEMENT, "{")
+                    .replace(CLOSE_CURLY_BRACE_REPLACEMENT, "}")
+                )
                 for i in range(
                     modifier.start,
                     modifier.end if modifier.end is not None else maxLines,
                 ):
                     ret[i].shouldOverwriteSourceLine = True
                     ret[i].overwriteObj = jsonObj
+            elif modifier.operation == "dupe":
+                offsetStr = modifier.rest[0]
+                offset = pyass.timedelta.parse(offsetStr)
+
+                for i in range(
+                    modifier.start,
+                    modifier.end if modifier.end is not None else maxLines,
+                ):
+                    if not ret[i].dupes:
+                        ret[i].dupes = [offset]
+                    else:
+                        ret[i].dupes.append(offset)
 
         return ret
