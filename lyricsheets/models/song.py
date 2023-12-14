@@ -91,7 +91,6 @@ class Song(JSONWizard):
     def modify(self, modifiers: Modifiers):
         lineModifiers = modifiers.toLineModifiers(maxLines=len(self.lyrics))
         outLyrics = []
-        additionalLineNumber = len(self.lyrics)
         extraLyrics = []
         for line, modifier in zip(self.lyrics, lineModifiers):
             # Song-related modifiers
@@ -138,11 +137,9 @@ class Song(JSONWizard):
             if modifier.dupes:
                 for offset in modifier.dupes:
                     dupeLine = deepcopy(line)
-                    dupeLine.idxInSong = additionalLineNumber
+                    dupeLine.idxInSong = len(self.lyrics) + len(extraLyrics)
                     dupeLine.start += offset
                     dupeLine.end += offset
-
-                    additionalLineNumber += 1
 
                     extraLyrics.append(dupeLine)
 
