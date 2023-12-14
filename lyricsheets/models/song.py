@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
+from copy import deepcopy
 
 from dataclass_wizard import JSONWizard
 
@@ -90,6 +91,8 @@ class Song(JSONWizard):
     def modify(self, modifiers: Modifiers):
         lineModifiers = modifiers.toLineModifiers(maxLines=len(self.lyrics))
         outLyrics = []
+        additionalLineNumber = len(self.lyrics)
+        extraLyrics = []
         for line, modifier in zip(self.lyrics, lineModifiers):
             # Song-related modifiers
             if modifier.shouldOverwriteTitle:
@@ -131,7 +134,21 @@ class Song(JSONWizard):
                 line.end += modifier.offset - modifier.trim
                 line.syllables[-1].length -= modifier.trim
 
+            # Duplicate modifiers
+            if modifier.dupes:
+                for offset in modifier.dupes:
+                    dupeLine = deepcopy(line)
+                    dupeLine.idxInSong = additionalLineNumber
+                    dupeLine.start += offset
+                    dupeLine.end += offset
+
+                    additionalLineNumber += 1
+
+                    extraLyrics.append(dupeLine)
+
             outLyrics.append(line)
+        
+        outLyrics.extend(extraLyrics)
 
         if lineModifiers[0].newOrder is None:
             self.lyrics = outLyrics
