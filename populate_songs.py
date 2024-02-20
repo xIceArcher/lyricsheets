@@ -6,7 +6,6 @@ import importlib.util
 import json
 import os
 import pyass
-import subprocess
 import sys
 
 from lyricsheets.ass import REQUIRED_STYLES, retrieve_effect
@@ -48,6 +47,7 @@ def populate_song(
     inEvent: pyass.Event,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     effectName: str,
+    shouldOverwriteEffect: bool,
     shouldPrintTitle: bool,
 ) -> Sequence[pyass.Event]:
     outEvents = []
@@ -78,16 +78,17 @@ def populate_song(
 
     song = songService.get_song(songName).modify(Modifiers(allModifiers))
 
-    for modifier in allModifiers:
-        if modifier.operation == "import":
-            spec = importlib.util.find_spec(modifier.rest[0])
-            if not spec or not spec.loader:
-                raise ModuleNotFoundError
+    if not shouldOverwriteEffect:
+        for modifier in allModifiers:
+            if modifier.operation == "import":
+                spec = importlib.util.find_spec(modifier.rest[0])
+                if not spec or not spec.loader:
+                    raise ModuleNotFoundError
 
-            lib = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(lib)
-        elif modifier.operation == "kfx":
-            effectName = modifier.rest[0]
+                lib = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(lib)
+            elif modifier.operation == "kfx":
+                effectName = modifier.rest[0]
 
     songEvents = retrieve_effect(effectName).to_events(
         song, actorToStyle, shouldPrintTitle
@@ -111,6 +112,7 @@ def populate_songs(
     inEvents: Sequence[pyass.Event],
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     effectName: str,
+    shouldOverwriteEffect: bool,
     shouldPrintTitle: bool,
 ) -> Sequence[pyass.Event]:
     outEvents = []
@@ -118,7 +120,7 @@ def populate_songs(
     for inEvent in inEvents:
         if inEvent.style == SONG_STYLE_NAME and inEvent.text:
             outEvents.extend(
-                populate_song(songService, inEvent, actorToStyle, effectName, shouldPrintTitle)
+                populate_song(songService, inEvent, actorToStyle, effectName, shouldOverwriteEffect, shouldPrintTitle)
             )
         else:
             outEvents.append(inEvent)
@@ -136,7 +138,10 @@ def main():
         default=True,
     )
     parser.add_argument("--config", help="Path to config file", default="./config.json")
-    parser.add_argument("--effect", help="Default effect to use", default="default_live_karaoke_effect")
+
+    effectGroup = parser.add_mutually_exclusive_group()
+    effectGroup.add_argument("--effect", help="Default effect to use", default="default_live_karaoke_effect")
+    effectGroup.add_argument("--force-effect", help="Force overwrite effect with supplied value even if an effect is specified in kfx tags", default="")
 
     args = parser.parse_args()
 
@@ -154,6 +159,12 @@ def main():
         k: pyass.Tags.parse(v) for k, v in songService.get_all_format_tags().items()
     }
 
+    shouldOverwriteEffect = args.force_effect != ""
+    if shouldOverwriteEffect:
+        effect = args.force_effect
+    else:
+        effect = args.effect
+
     for file in args.input_fnames:
         sys.path.append(os.path.dirname(file))
         with open(file, encoding="utf_8_sig") as inputFile:
@@ -163,25 +174,11 @@ def main():
 
             inputAss.events = filter_old_song_lines(inputAss.events)
             inputAss.events = populate_songs(
-                songService, inputAss.events, actorToStyle, args.effect, args.title
+                songService, inputAss.events, actorToStyle, effect, shouldOverwriteEffect, args.title
             )
 
             with open(file, "w+", encoding="utf_8_sig") as outFile:
                 pyass.dump(inputAss, outFile)
-
-        try:
-            subprocess.run(
-                [
-                    "aegisub-cli",
-                    "--automation",
-                    "kara-templater.lua",
-                    file,
-                    file,
-                    "Apply karaoke template",
-                ]
-            )
-        except FileNotFoundError:
-            pass
 
 
 if __name__ == "__main__":
