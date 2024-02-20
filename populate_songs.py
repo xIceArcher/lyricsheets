@@ -47,6 +47,7 @@ def populate_song(
     songService: SongService,
     inEvent: pyass.Event,
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    effectName: str,
     shouldPrintTitle: bool,
 ) -> Sequence[pyass.Event]:
     outEvents = []
@@ -77,7 +78,6 @@ def populate_song(
 
     song = songService.get_song(songName).modify(Modifiers(allModifiers))
 
-    effectName = "default_live_karaoke_effect"
     for modifier in allModifiers:
         if modifier.operation == "import":
             spec = importlib.util.find_spec(modifier.rest[0])
@@ -110,14 +110,15 @@ def populate_songs(
     songService: SongService,
     inEvents: Sequence[pyass.Event],
     actorToStyle: Mapping[str, Sequence[pyass.Tag]],
+    effectName: str,
     shouldPrintTitle: bool,
 ) -> Sequence[pyass.Event]:
     outEvents = []
 
     for inEvent in inEvents:
-        if inEvent.style == SONG_STYLE_NAME:
+        if inEvent.style == SONG_STYLE_NAME and inEvent.text:
             outEvents.extend(
-                populate_song(songService, inEvent, actorToStyle, shouldPrintTitle)
+                populate_song(songService, inEvent, actorToStyle, effectName, shouldPrintTitle)
             )
         else:
             outEvents.append(inEvent)
@@ -135,6 +136,7 @@ def main():
         default=True,
     )
     parser.add_argument("--config", help="Path to config file", default="./config.json")
+    parser.add_argument("--effect", help="Default effect to use", default="default_live_karaoke_effect")
 
     args = parser.parse_args()
 
@@ -161,7 +163,7 @@ def main():
 
             inputAss.events = filter_old_song_lines(inputAss.events)
             inputAss.events = populate_songs(
-                songService, inputAss.events, actorToStyle, args.title
+                songService, inputAss.events, actorToStyle, args.effect, args.title
             )
 
             with open(file, "w+", encoding="utf_8_sig") as outFile:
