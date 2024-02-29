@@ -525,17 +525,21 @@ class SongDB:
             newSyllableToActor = []
             currCharIdx = 0
             for newSyllable in newLine.syllables:
-                actors = set(
-                    charToActor[currCharIdx : currCharIdx + len(newSyllable.text)]
-                )
-
-                if len(actors) != 1:
-                    raise NotImplementedError(
-                        f"Syllable '{newSyllable.text}' in line {lineIdx + 1} does not have a unique actor, actors: {actors}"
+                # If the syllable is empty, take the actor of the last syllable
+                if newSyllable.text == '':
+                    newSyllableToActor.append(charToActor[currCharIdx - 1])
+                else:                
+                    actors = set(
+                        charToActor[currCharIdx : currCharIdx + len(newSyllable.text)]
                     )
 
-                newSyllableToActor.append(list(actors)[0])
-                currCharIdx += len(newSyllable.text)
+                    if len(actors) != 1:
+                        raise NotImplementedError(
+                            f"Syllable '{newSyllable.text}' in line {lineIdx + 1} does not have a unique actor, actors: {actors}"
+                        )
+
+                    newSyllableToActor.append(list(actors)[0])
+                    currCharIdx += len(newSyllable.text)
 
             for syllableIdx, (
                 oldSyllable,
@@ -667,7 +671,7 @@ class SongDB:
         ret = []
 
         for row in range(5, len(sheetData)):
-            if "formattedValue" in sheetData[row]["values"][0]:
+            if "values" in sheetData[row] and "formattedValue" in sheetData[row]["values"][0]:
                 ret.append(row)
 
         return ret
