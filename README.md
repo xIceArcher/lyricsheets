@@ -77,7 +77,7 @@ Here is the list of modifiers:
 | Modifier | # of Additional Arguments | Description |
 | --- | --- | --- |
 | Discard | 1 | Discards all specified lines. If line 1 is discarded, the start of the song is now dependent on the first line that is not discarded. |
-| Offset | 2 | Offsets all specific lines forward by a specified timedelta. It is possible to offset the lines backward by specifying a negative timedelta.
+| Offset | 2 | Offsets all specific lines forwards by a specified timedelta. It is possible to offset the lines backward by specifying a negative timedelta. If no lines are specified via `-`, then the titlecard is offset *backwards* by the specified timedelta. Specifying a negative timedelta will offset the titlecard forwards.
 | Secondary | 1 | Forces the specified lines to become secondary lines (i.e. displayed up top).
 | Trim | 2 | Trims the last syllable of the specified lines by a timedelta. This modifies both the length of the line and the karaoke time of the final syllable. It is possible to extend the last syllable by specifying a negative timedelta.
 | Dupe | 2 | Duplicates the specified lines, then offsets them forward by a specified timedelta. A duplicated line is processed after all other modifiers are applied to it, and is executed as a deep copy, so further modifications to the original line will not apply to the duplicated line and vice-versa.
