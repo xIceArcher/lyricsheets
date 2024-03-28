@@ -34,6 +34,16 @@ Running the script on an .ass file with the line earlier will generate three thi
 2. A list of Romaji lines of the song. Each line is ktimed with a simple `\kf` effect, fades in left to right, fades out left to right, is centered at `(960,960)` or `(960,65)`, and changes color from left to right whenever there is an actor change. For cases where the Romaji and English translation are the same, the line is centered at `(960,1010)`.
 3. A list of English translated lines for the song. Each line fades in left to right, fades out left to right, is centered at `(960,1015)` or `(960,120)`, and changes color from left to right whenever there is an actor change. For cases where the Romaji and English translation are the same, an English translated line will be generated, but it will be commented out, so only the Romaji line will be visible for that line.
 
+#### Other flags
+
+`--title <True/False>`
+
+Optional flag. Generates a titlecard for each song if `True`, ignores it if `False`. Defaults to `True`.
+
+`--config <config file path>`
+
+Optional flag. Path to the config file. Defaults to `config.json` in the same directory if not specified.
+
 #### Modifiers
 
 It is possible to make changes to the song line generation without touching the song database. This involves the usage of modifiers, which are included in the `Text` field of the `Song` line.
@@ -124,3 +134,38 @@ WIP
 **Overwrite**
 
 WIP
+
+#### Effects
+
+Effects are a way of generating more powerful kfx for songs using Python scripts. They are loaded by the use of the following modifiers:
+
+**Import**
+
+Accepts two arguments. The first argument will always be `-`. The second argument is the name of the file containing the effects to load. The default behavior is to look in the same directory as the .ass file being populated.
+
+**KFX**
+
+Accepts two arguments. The first argument will always be `-`. The second argument is the name of the effect to use for the particular song, which needs to either be a default effect from within this repository in `lyricsheets/effect/`, or loaded previously via `Import`.
+
+Example usage:
+```
+Comment: 0,0:38:27.51,0:38:27.51,Song,,0,0,0,,{\lyricsmodify(import,-,chase;kfx,-,chase_effect)}CHASE!
+```
+*Loads in effects from `chase.py`, then generates KFX for the song `CHASE!` using the effect titled `chase_effect`.*
+
+Other things to note:
+
+1. Multiple effects can be loaded from one file.
+2. `Import` only needs to be called once for every file. Once a file and all its effects are loaded, it can be used by any `KFX` modifier in the same .ass file.
+
+Effects can also be loaded for a file via flags when running `populate_songs.py`.
+
+`--effect <name>`
+
+Specifies a default effect to use for all songs within the .ass files passed into the script.
+
+`--force-effect <name>`
+
+Forces an effect to use for all songs within the .ass files passed into the script. Ignores the `KFX` modifier in all songs.
+
+A guide on how to write custom effects is WIP.
