@@ -482,7 +482,7 @@ def to_romaji_k_line(line: SongLine) -> KLine:
             end=accLength + syl.length,
             inlineFx=actor,
             chars=[],
-            idxInLine=len(kLine.syls),
+            idxInLine=len(kLine.syls)+1,
             line=kLine,
         )
 
@@ -490,7 +490,7 @@ def to_romaji_k_line(line: SongLine) -> KLine:
             kChar = KChar(
                 text=c,
                 idxInLine=totalChars,
-                idxInSyl=len(kSyl.chars),
+                idxInSyl=len(kSyl.chars)+1,
                 syl=kSyl,
                 line=kLine,
             )
@@ -529,15 +529,15 @@ def to_en_k_line(line: SongLine) -> KLine:
         end=line.start,
         chars=[],
         inlineFx="",
-        idxInLine=0,
+        idxInLine=1,
         line=kLineEN,
     )
 
     kSylEN.chars = [
         KChar(
             text=char,
-            idxInLine=i,
-            idxInSyl=i,
+            idxInLine=i+1,
+            idxInSyl=i+1,
             syl=kSylEN,
             line=kLineEN,
         )
