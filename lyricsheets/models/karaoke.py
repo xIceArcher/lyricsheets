@@ -489,7 +489,7 @@ def to_romaji_k_line(line: SongLine) -> KLine:
         for c in syl.text:
             kChar = KChar(
                 text=c,
-                idxInLine=totalChars,
+                idxInLine=totalChars+1,
                 idxInSyl=len(kSyl.chars)+1,
                 syl=kSyl,
                 line=kLine,
