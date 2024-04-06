@@ -61,11 +61,11 @@ class KChar:
 
     @property
     def start(self) -> timedelta:
-        return self.syl._charKaraTimes[self.idxInSyl]
+        return self.syl._charKaraTimes[self.idxInSyl - 1]
 
     @property
     def end(self) -> timedelta:
-        return self.syl._charKaraTimes[self.idxInSyl + 1]
+        return self.syl._charKaraTimes[self.idxInSyl]
 
     @property
     def duration(self) -> timedelta:
@@ -117,7 +117,7 @@ class KChar:
 
     @property
     def fadeOffset(self) -> timedelta:
-        return self.line._charFadeOffsets[self.idxInLine]
+        return self.line._charFadeOffsets[self.idxInLine - 1]
 
 
 @dataclass
