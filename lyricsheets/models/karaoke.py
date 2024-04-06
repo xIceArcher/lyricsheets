@@ -81,10 +81,10 @@ class KChar:
 
     @cached_property
     def left(self) -> float:
-        if self.idxInLine == 0:
+        if self.idxInLine == 1:
             return self.line.left
 
-        prevChar = self.line.chars[self.idxInLine - 1]
+        prevChar = self.line.chars[self.idxInLine - 2]
         return prevChar.left + prevChar.width
 
     @property
@@ -176,10 +176,10 @@ class KSyl:
 
     @cached_property
     def left(self) -> float:
-        if self.idxInLine == 0:
+        if self.idxInLine == 1:
             return self.line.left + self.preSpaceWidth
 
-        prevSyl = self.line.syls[self.idxInLine - 1]
+        prevSyl = self.line.syls[self.idxInLine - 2]
         return (
             prevSyl.left + prevSyl.width + prevSyl.postSpaceWidth + self.preSpaceWidth
         )
