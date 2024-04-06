@@ -147,7 +147,7 @@ class Song(JSONWizard):
         
         outLyrics.extend(extraLyrics)
 
-        if lineModifiers[0].newOrder is None:
+        if len(lineModifiers) == 0 or lineModifiers[0].newOrder is None:
             self.lyrics = outLyrics
             return self
 
