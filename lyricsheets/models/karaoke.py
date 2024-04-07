@@ -61,11 +61,11 @@ class KChar:
 
     @property
     def start(self) -> timedelta:
-        return self.syl._charKaraTimes[self.idxInSyl]
+        return self.syl._charKaraTimes[self.idxInSyl - 1]
 
     @property
     def end(self) -> timedelta:
-        return self.syl._charKaraTimes[self.idxInSyl + 1]
+        return self.syl._charKaraTimes[self.idxInSyl]
 
     @property
     def duration(self) -> timedelta:
@@ -81,10 +81,10 @@ class KChar:
 
     @cached_property
     def left(self) -> float:
-        if self.idxInLine == 0:
+        if self.idxInLine == 1:
             return self.line.left
 
-        prevChar = self.line.chars[self.idxInLine - 1]
+        prevChar = self.line.chars[self.idxInLine - 2]
         return prevChar.left + prevChar.width
 
     @property
@@ -117,7 +117,7 @@ class KChar:
 
     @property
     def fadeOffset(self) -> timedelta:
-        return self.line._charFadeOffsets[self.idxInLine]
+        return self.line._charFadeOffsets[self.idxInLine - 1]
 
 
 @dataclass
@@ -176,10 +176,10 @@ class KSyl:
 
     @cached_property
     def left(self) -> float:
-        if self.idxInLine == 0:
+        if self.idxInLine == 1:
             return self.line.left + self.preSpaceWidth
 
-        prevSyl = self.line.syls[self.idxInLine - 1]
+        prevSyl = self.line.syls[self.idxInLine - 2]
         return (
             prevSyl.left + prevSyl.width + prevSyl.postSpaceWidth + self.preSpaceWidth
         )
@@ -482,15 +482,15 @@ def to_romaji_k_line(line: SongLine) -> KLine:
             end=accLength + syl.length,
             inlineFx=actor,
             chars=[],
-            idxInLine=len(kLine.syls),
+            idxInLine=len(kLine.syls)+1,
             line=kLine,
         )
 
         for c in syl.text:
             kChar = KChar(
                 text=c,
-                idxInLine=totalChars,
-                idxInSyl=len(kSyl.chars),
+                idxInLine=totalChars+1,
+                idxInSyl=len(kSyl.chars)+1,
                 syl=kSyl,
                 line=kLine,
             )
@@ -529,15 +529,15 @@ def to_en_k_line(line: SongLine) -> KLine:
         end=line.start,
         chars=[],
         inlineFx="",
-        idxInLine=0,
+        idxInLine=1,
         line=kLineEN,
     )
 
     kSylEN.chars = [
         KChar(
             text=char,
-            idxInLine=i,
-            idxInSyl=i,
+            idxInLine=i+1,
+            idxInSyl=i+1,
             syl=kSylEN,
             line=kLineEN,
         )
