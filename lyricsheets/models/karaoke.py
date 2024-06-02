@@ -170,7 +170,7 @@ class KSyl:
         numPostSpaces = len(self.text) - len(self.text.rstrip())
         return (
             FontScaler(self.style).get_length(self.text[-(numPostSpaces):])
-            if numPostSpaces
+            if numPostSpaces and numPostSpaces != len(self.text)
             else 0
         )
 

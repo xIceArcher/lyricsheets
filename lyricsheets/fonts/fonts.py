@@ -38,7 +38,7 @@ class FontScaler:
 
         return ans
 
-    def get_length(self, text: str) -> int:
+    def get_length(self, text: str) -> float:
         width = 0
         if self.style.spacing:
             for c in text:
@@ -58,7 +58,7 @@ class FontScaler:
             )
             width = extent.width * scaling
 
-        return int(round(self.style.scaleX / 100 * width / PRECISION_SCALE, 0))
+        return self.style.scaleX / 100 * width / PRECISION_SCALE
 
 
 def _find_font(style: Style) -> wx.Font:
