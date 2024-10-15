@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import cached_property, reduce
@@ -6,6 +7,7 @@ import operator
 from typing import Optional, Sequence, TypeVar
 
 import pyass
+from pyass.timedelta import timedelta as pyasstimedelta
 
 from lyricsheets.models import SongLine
 from lyricsheets.fonts import FontScaler
@@ -16,9 +18,79 @@ KSyl = TypeVar("KSyl", bound="KSyl")
 KLine = TypeVar("KLine", bound="KLine")
 
 
+class KObject:
+    @abstractmethod
+    def inline_var(self, inline_name: str) -> int: ...
+
+    ### Properties common to KLine, KSyl and KChar
+    @property
+    @abstractmethod
+    def text(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def start(self) -> timedelta: ...
+
+    @property
+    @abstractmethod
+    def end(self) -> timedelta: ...
+
+    @property
+    @abstractmethod
+    def width(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def height(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def left(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def center(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def right(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def top(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def middle(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def bottom(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def x(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def y(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def kLine(self) -> KLine: ...
+
+    @property
+    @abstractmethod
+    def kSyl(self) -> KSyl: ...
+
+    @property
+    @abstractmethod
+    def kChar(self) -> KChar: ...
+
+
 @dataclass
-class KChar:
-    text: str
+class KChar(KObject):
+    _text: str
     idxInLine: int
     line: KLine
     idxInSyl: int
@@ -27,11 +99,11 @@ class KChar:
     ### Property aliases to maintain compatibility with Aegisub variable namings
     @property
     def char(self) -> str:
-        return self.text
+        return self._text
 
     @char.setter
     def char(self, char: str):
-        self.text = char
+        self._text = char
 
     @property
     def i(self) -> int:
@@ -59,6 +131,49 @@ class KChar:
 
     ### End Aegisub compatibility variables
 
+    def inline_var(self, inline_name: str) -> int:
+        match inline_name:
+            case "cstart" | "start":
+                return pyasstimedelta(self.start).total_milliseconds()
+            case "cend" | "end":
+                return pyasstimedelta(self.end).total_milliseconds()
+            case "cmid" | "mid":
+                return pyasstimedelta((self.start + self.end) / 2).total_milliseconds()
+            case "cdur" | "dur":
+                return pyasstimedelta(self.duration).total_milliseconds()
+            case "ckdur" | "kdur":
+                return pyasstimedelta(self.duration).total_centiseconds()
+            case "cyln":
+                return len(self.syls)
+            case "ci" | "i":
+                return self.idxInSong
+            case "cleft" | "left":
+                return round(self.left)
+            case "ccenter" | "center":
+                return round(self.center)
+            case "cright" | "right":
+                return round(self.right)
+            case "ctop" | "top":
+                return round(self.top)
+            case "cmiddle" | "middle":
+                return round(self.middle)
+            case "cbottom" | "bottom":
+                return round(self.bottom)
+            case "cx" | "x":
+                return round(self.x)
+            case "cy" | "y":
+                return round(self.y)
+            case "cwidth" | "width":
+                return round(self.width)
+            case "cheight" | "height":
+                return round(self.height)
+            case _:
+                return 19920808
+
+    @property
+    def text(self) -> str:
+        return self._text
+
     @property
     def start(self) -> timedelta:
         return self.syl._charKaraTimes[self.idxInSyl - 1]
@@ -77,7 +192,7 @@ class KChar:
 
     @cached_property
     def width(self) -> float:
-        return FontScaler(self.style).get_length(self.text)
+        return FontScaler(self.style).get_length(self._text)
 
     @cached_property
     def left(self) -> float:
@@ -119,11 +234,23 @@ class KChar:
     def fadeOffset(self) -> timedelta:
         return self.line._charFadeOffsets[self.idxInLine - 1]
 
+    @property
+    def kLine(self) -> KLine:
+        return self.line
+    
+    @property
+    def kSyl(self) -> KSyl:
+        return self.syl
+    
+    @property
+    def kChar(self) -> KChar:
+        return self
+
 
 @dataclass
-class KSyl:
-    start: timedelta
-    end: timedelta
+class KSyl(KObject):
+    _start: timedelta
+    _end: timedelta
     chars: list[KChar]
     inlineFx: str
     idxInLine: int
@@ -140,13 +267,62 @@ class KSyl:
 
     ### End Aegisub compatibility variables
 
+    def inline_var(self, inline_name: str) -> int:
+        match inline_name:
+            case "sstart" | "start":
+                return pyasstimedelta(self._start).total_milliseconds()
+            case "send" | "end":
+                return pyasstimedelta(self._end).total_milliseconds()
+            case "smid" | "mid":
+                return pyasstimedelta(
+                    (self._start + self._end) / 2
+                ).total_milliseconds()
+            case "sdur" | "dur":
+                return pyasstimedelta(self.duration).total_milliseconds()
+            case "skdur" | "kdur":
+                return pyasstimedelta(self.duration).total_centiseconds()
+            case "syln":
+                return len(self.syls)
+            case "si" | "i":
+                return self.idxInSong
+            case "sleft" | "left":
+                return round(self.left)
+            case "scenter" | "center":
+                return round(self.center)
+            case "sright" | "right":
+                return round(self.right)
+            case "stop" | "top":
+                return round(self.top)
+            case "smiddle" | "middle":
+                return round(self.middle)
+            case "sbottom" | "bottom":
+                return round(self.bottom)
+            case "sx" | "x":
+                return round(self.x)
+            case "sy" | "y":
+                return round(self.y)
+            case "swidth" | "width":
+                return round(self.width)
+            case "sheight" | "height":
+                return round(self.height)
+            case _:
+                return 19920808
+
+    @property
+    def start(self) -> timedelta:
+        return self._start
+
+    @property
+    def end(self) -> timedelta:
+        return self._end
+
     @property
     def text(self) -> str:
-        return "".join(char.text for char in self.chars)
+        return "".join(char._text for char in self.chars)
 
     @property
     def duration(self) -> timedelta:
-        return self.end - self.start
+        return self._end - self._start
 
     @property
     def style(self) -> pyass.Style:
@@ -221,13 +397,25 @@ class KSyl:
             )
         ]
 
-        return list(accumulate(syllableCharLengths, operator.add, initial=self.start))
+        return list(accumulate(syllableCharLengths, operator.add, initial=self._start))
+
+    @property
+    def kLine(self) -> KLine:
+        return self.line
+    
+    @property
+    def kSyl(self) -> KSyl:
+        return self
+    
+    @property
+    def kChar(self) -> KChar:
+        return self.chars[0]
 
 
 @dataclass
-class KLine:
-    start: timedelta
-    end: timedelta
+class KLine(KObject):
+    _start: timedelta
+    _end: timedelta
     syls: list[KSyl]
     startActor: str
     actorSwitches: list[tuple[timedelta, str]]
@@ -252,13 +440,114 @@ class KLine:
 
     ### End Aegisub compatibility variables
 
+    def inline_var(self, inline_name: str) -> int:
+        match inline_name:
+            case "lstart" | "start":
+                return pyasstimedelta(self._start).total_milliseconds()
+            case "lend" | "end":
+                return pyasstimedelta(self._end).total_milliseconds()
+            case "ldur" | "dur":
+                return pyasstimedelta(self.duration).total_milliseconds()
+            case "lkdur" | "kdur":
+                return pyasstimedelta(self.duration).total_centiseconds()
+            case "lmid" | "mid":
+                return pyasstimedelta(
+                    (self._start + self._end) / 2
+                ).total_milliseconds()
+            case "syln":
+                return len(self.syls)
+            case "li" | "i":
+                return self.idxInSong
+            case "lleft" | "left":
+                return round(self.left)
+            case "lcenter" | "center":
+                return round(self.center)
+            case "lright" | "right":
+                return round(self.right)
+            case "ltop" | "top":
+                return round(self.top)
+            case "lmiddle" | "middle":
+                return round(self.middle)
+            case "lbottom" | "bottom":
+                return round(self.bottom)
+            case "lx" | "x":
+                return round(self.x)
+            case "ly" | "y":
+                return round(self.y)
+            case "lwidth" | "width":
+                return round(self.width)
+            case "lheight" | "height":
+                return round(self.height)
+            case _:
+                return 19920808
+
+    @property
+    def start(self) -> timedelta:
+        return self._start
+
+    @property
+    def end(self) -> timedelta:
+        return self._end
+
+    @property
+    def lstart(self) -> int:
+        return pyasstimedelta(self._start).total_milliseconds()
+
+    @property
+    def lend(self) -> int:
+        return pyasstimedelta(self._end).total_milliseconds()
+
+    @property
+    def ldur(self) -> int:
+        return pyasstimedelta(self.duration).total_milliseconds()
+
+    @property
+    def lmid(self) -> int:
+        return pyasstimedelta((self._start + self._end) / 2).total_milliseconds()
+
+    @property
+    def syln(self) -> int:
+        return len(self.syls)
+
+    @property
+    def lleft(self) -> int:
+        return round(self.left)
+
+    @property
+    def lcenter(self) -> int:
+        return round(self.center)
+
+    @property
+    def lright(self) -> int:
+        return round(self.right)
+
+    @property
+    def ltop(self) -> int:
+        return round(self.top)
+
+    @property
+    def lmiddle(self) -> int:
+        return round(self.middle)
+
+    @property
+    def lbottom(self) -> int:
+        return round(self.bottom)
+
+    @property
+    def lx(self) -> int:
+        return round(self.x)
+
+    @property
+    def ly(self) -> int:
+        return round(self.y)
+
     @property
     def text(self) -> str:
-        return "".join(c.text for text in self.syls for c in text.chars)
+        return "".join(c._text for text in self.syls for c in text.chars)
 
     @property
     def duration(self) -> timedelta:
-        return self.end - self.start
+        return self._end - self._start
 
     @property
     def chars(self) -> Sequence[KChar]:
@@ -441,6 +730,18 @@ class KLine:
 
         return list(accumulate(lineCharTimes, operator.add, initial=timedelta()))
 
+    @property
+    def kLine(self) -> KLine:
+        return self
+    
+    @property
+    def kSyl(self) -> KSyl:
+        return self.syls[0]
+    
+    @property
+    def kChar(self) -> KChar:
+        return self.chars[0]
+
 
 class StyleNotBoundException(Exception):
     pass
@@ -452,8 +753,8 @@ def to_romaji_k_line(line: SongLine) -> KLine:
     )
 
     kLine = KLine(
-        start=line.start,
-        end=line.end,
+        _start=line.start,
+        _end=line.end,
         syls=[],
         startActor=line.actors[0],
         actorSwitches=[
@@ -478,19 +779,19 @@ def to_romaji_k_line(line: SongLine) -> KLine:
 
     for syl, actor in zip(line.syllables, actors):
         kSyl = KSyl(
-            start=accLength,
-            end=accLength + syl.length,
+            _start=accLength,
+            _end=accLength + syl.length,
             inlineFx=actor,
             chars=[],
-            idxInLine=len(kLine.syls)+1,
+            idxInLine=len(kLine.syls) + 1,
             line=kLine,
         )
 
         for c in syl.text:
             kChar = KChar(
-                text=c,
-                idxInLine=totalChars+1,
-                idxInSyl=len(kSyl.chars)+1,
+                _text=c,
+                idxInLine=totalChars + 1,
+                idxInSyl=len(kSyl.chars) + 1,
                 syl=kSyl,
                 line=kLine,
             )
@@ -509,8 +810,8 @@ def to_en_k_line(line: SongLine) -> KLine:
         lambda a, b: a + [a[-1] + b.length], line.syllables, [timedelta(0)]
     )
     kLineEN = KLine(
-        start=line.start,
-        end=line.end,
+        _start=line.start,
+        _end=line.end,
         syls=[],
         startActor=line.actors[0],
         actorSwitches=[
@@ -525,8 +826,8 @@ def to_en_k_line(line: SongLine) -> KLine:
     )
 
     kSylEN = KSyl(
-        start=line.start,
-        end=line.start,
+        _start=line.start,
+        _end=line.start,
         chars=[],
         inlineFx="",
         idxInLine=1,
@@ -535,9 +836,9 @@ def to_en_k_line(line: SongLine) -> KLine:
 
     kSylEN.chars = [
         KChar(
-            text=char,
-            idxInLine=i+1,
-            idxInSyl=i+1,
+            _text=char,
+            idxInLine=i + 1,
+            idxInSyl=i + 1,
             syl=kSylEN,
             line=kLineEN,
         )

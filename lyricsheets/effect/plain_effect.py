@@ -7,8 +7,8 @@ def to_plain_event(line: KLine) -> pyass.Event:
     return pyass.Event(
         format=get_line_format(line),
         style=EN_STYLE.name if line.isEN else ROMAJI_STYLE.name,
-        start=line.start,
-        end=line.end,
+        start=line._start,
+        end=line._end,
         parts=[
             pyass.EventPart(
                 tags=[
