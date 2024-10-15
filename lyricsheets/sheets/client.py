@@ -124,9 +124,9 @@ class GoogleSheetsClient:
 
     def color_to_hex(self, color: Mapping[str, int]) -> str:
         r, g, b = map(
-            lambda colorComponent: round(color[colorComponent] * 255)
-            if colorComponent in color
-            else 0,
+            lambda colorComponent: (
+                round(color[colorComponent] * 255) if colorComponent in color else 0
+            ),
             ["red", "green", "blue"],
         )
         return f"{r:02x}{g:02x}{b:02x}"

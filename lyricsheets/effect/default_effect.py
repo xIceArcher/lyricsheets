@@ -49,11 +49,15 @@ def get_char_transform_tags(
     enterTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0x00)],
     exitTag: Sequence[pyass.Tag] = [pyass.AlphaTag(0xFF)],
 ) -> Sequence[pyass.Tag]:
-    return [
-        *startTag,
-        get_enter_transition_tag(kChar, switchDuration, enterTag),
-        get_exit_transition_tag(kChar, switchDuration, transitionDuration, exitTag),
-    ] if switchDuration != timedelta(0) else []
+    return (
+        [
+            *startTag,
+            get_enter_transition_tag(kChar, switchDuration, enterTag),
+            get_exit_transition_tag(kChar, switchDuration, transitionDuration, exitTag),
+        ]
+        if switchDuration != timedelta(0)
+        else []
+    )
 
 
 def get_enter_transition_tag(

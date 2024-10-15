@@ -13,9 +13,11 @@ def to_plain_event(line: KLine) -> pyass.Event:
             pyass.EventPart(
                 tags=[
                     pyass.KaraokeTag(syl.duration, False),
-                    pyass.IFXTag(syl.inlineFx)
-                    if syl2 is None or syl.inlineFx != syl2.inlineFx
-                    else pyass.tag.UnknownTag(""),
+                    (
+                        pyass.IFXTag(syl.inlineFx)
+                        if syl2 is None or syl.inlineFx != syl2.inlineFx
+                        else pyass.tag.UnknownTag("")
+                    ),
                 ],
                 text=syl.text,
             )

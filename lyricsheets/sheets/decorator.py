@@ -7,8 +7,7 @@ from backoff import on_exception, expo
 
 class TokenBucket(ABC):
     @abstractmethod
-    def consume(self, key: str, num_tokens: int):
-        ...
+    def consume(self, key: str, num_tokens: int): ...
 
 
 class WithTokenBucket(Protocol):

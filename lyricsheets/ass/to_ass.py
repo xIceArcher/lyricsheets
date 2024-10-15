@@ -21,8 +21,7 @@ class Effect(ABC):
         song: Song,
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
         shouldPrintTitle: bool = True,
-    ) -> Sequence[pyass.Event]:
-        ...
+    ) -> Sequence[pyass.Event]: ...
 
 
 class LyricsEffect(Effect):
@@ -76,9 +75,11 @@ class LyricsEffect(Effect):
             s.append(f"Written by: {', '.join(song.creators.writers)}")
 
         return pyass.Event(
-            format=pyass.EventFormat.DIALOGUE
-            if shouldPrintTitle
-            else pyass.EventFormat.COMMENT,
+            format=(
+                pyass.EventFormat.DIALOGUE
+                if shouldPrintTitle
+                else pyass.EventFormat.COMMENT
+            ),
             style=self.titleStyle.name,
             end=self.titleEventDuration,
             parts=[
@@ -89,8 +90,7 @@ class LyricsEffect(Effect):
     @abstractmethod
     def to_lyrics_events(
         self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
-    ) -> Sequence[pyass.Event]:
-        ...
+    ) -> Sequence[pyass.Event]: ...
 
 
 class KaraokeEffect(LyricsEffect):
@@ -129,25 +129,21 @@ class KaraokeEffect(LyricsEffect):
         self,
         songLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        ...
+    ) -> Sequence[pyass.Event]: ...
 
     @abstractmethod
     def to_en_k_events(
         self,
         songLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        ...
+    ) -> Sequence[pyass.Event]: ...
 
 
 class DependentKaraokeEffect(LyricsEffect):
     def to_lyrics_events(
         self, song: Song, actorToStyle: Mapping[str, Sequence[pyass.Tag]]
     ) -> Sequence[pyass.Event]:
-        romajiKLines = [
-            to_romaji_k_line(line) for line in song.lyrics
-        ]
+        romajiKLines = [to_romaji_k_line(line) for line in song.lyrics]
 
         enKLines = [to_en_k_line(line) for line in song.lyrics]
 
@@ -164,8 +160,7 @@ class DependentKaraokeEffect(LyricsEffect):
         romajiLines: Sequence[KLine],
         enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        ...
+    ) -> Sequence[pyass.Event]: ...
 
     @abstractmethod
     def to_en_k_events(
@@ -173,8 +168,7 @@ class DependentKaraokeEffect(LyricsEffect):
         romajiLines: Sequence[KLine],
         enLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
-    ) -> Sequence[pyass.Event]:
-        ...
+    ) -> Sequence[pyass.Event]: ...
 
 
 def get_line_format(line: KLine) -> pyass.EventFormat:
