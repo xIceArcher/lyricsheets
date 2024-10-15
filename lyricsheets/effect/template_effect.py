@@ -190,7 +190,18 @@ class Template:
 
 class TemplateEffect(KaraokeEffect):
     templates: Sequence[tuple[Template, Range]]
-    styles: Sequence[tuple[pyass.Style, Range]]
+    romaji_styles: Sequence[tuple[pyass.Style, Range]]
+    en_styles: Sequence[tuple[pyass.Style, Range]]
+
+    def pick_romaji_style(self, line: int) -> pyass.Style:
+        for style, range in self.romaji_styles:
+            if range.contains(line):
+                return style
+
+    def pick_en_style(self, line: int) -> pyass.Style:
+        for style, range in self.en_styles:
+            if range.contains(line):
+                return style
 
     @staticmethod
     def _get_function_data(text: str) -> tuple[str, list[str]]:
@@ -235,6 +246,12 @@ class TemplateEffect(KaraokeEffect):
         events = []
 
         for songLine in songLines:
+            style = (
+                self.pick_en_style(songLine.idxInSong)
+                if songLine.isEN
+                else self.pick_romaji_style(songLine.idxInSong)
+            )
+            songLine.style = style
             for template, range in self.templates:
                 if range.contains(songLine.idxInSong):
                     if template.templateType == TemplateType.LINE:
@@ -257,14 +274,14 @@ class TemplateEffect(KaraokeEffect):
         songLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        pass
+        return self.apply_templates_to_lines(songLines)
 
     def to_en_k_events(
         self,
         songLines: Sequence[KLine],
         actorToStyle: Mapping[str, Sequence[pyass.Tag]],
     ) -> Sequence[pyass.Event]:
-        pass
+        return self.apply_templates_to_lines(songLines)
 
 
 register_effect("template_effect", TemplateEffect())
