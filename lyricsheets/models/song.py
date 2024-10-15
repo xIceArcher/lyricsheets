@@ -144,7 +144,7 @@ class Song(JSONWizard):
                     extraLyrics.append(dupeLine)
 
             outLyrics.append(line)
-        
+
         outLyrics.extend(extraLyrics)
 
         if lineModifiers[0].newOrder is None:
