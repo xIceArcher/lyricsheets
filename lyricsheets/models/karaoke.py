@@ -37,6 +37,10 @@ class KObject:
 
     @property
     @abstractmethod
+    def style(self) -> pyass.Style: ...
+
+    @property
+    @abstractmethod
     def width(self) -> float: ...
 
     @property
@@ -68,12 +72,38 @@ class KObject:
     def bottom(self) -> float: ...
 
     @property
-    @abstractmethod
-    def x(self) -> float: ...
+    def x(self) -> float:
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.TOP_LEFT,
+        }:
+            return self.left
+        elif self.style.alignment in {
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.TOP,
+        }:
+            return self.center
+        else:
+            return self.right
 
     @property
-    @abstractmethod
-    def y(self) -> float: ...
+    def y(self) -> float:
+        if self.style.alignment in {
+            pyass.Alignment.BOTTOM_LEFT,
+            pyass.Alignment.BOTTOM,
+            pyass.Alignment.BOTTOM_RIGHT,
+        }:
+            return self.bottom
+        elif self.style.alignment in {
+            pyass.Alignment.CENTER_LEFT,
+            pyass.Alignment.CENTER,
+            pyass.Alignment.CENTER_RIGHT,
+        }:
+            return self.middle
+        else:
+            return self.top
 
     @property
     @abstractmethod
@@ -167,6 +197,8 @@ class KChar(KObject):
                 return round(self.width)
             case "cheight" | "height":
                 return round(self.height)
+            case "cfade" | "fade":
+                return pyasstimedelta(self.fadeOffset).total_milliseconds()
             case _:
                 return 19920808
 

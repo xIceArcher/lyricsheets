@@ -20,8 +20,8 @@ def mock_kObjects():
 
         mock_kSyl = Mock(spec=KSyl)
 
-        mock_kSyl.start = timedelta(seconds=start)
-        mock_kSyl.end = timedelta(seconds=end)
+        mock_kSyl.start = timedelta(seconds=i*5)
+        mock_kSyl.end = timedelta(seconds=(i+1)*5)
         mock_kSyl.duration = timedelta(seconds=5)
 
         mock_kSyl.chars = []
@@ -29,8 +29,8 @@ def mock_kObjects():
         for j in range(5):
             mock_kChar = Mock(spec=KChar)
 
-            mock_kChar.start = timedelta(seconds=start + j)
-            mock_kChar.end = timedelta(seconds=start + j + 1)
+            mock_kChar.start = mock_kSyl.start + timedelta(seconds=j)
+            mock_kChar.end = mock_kChar.start + timedelta(seconds=1)
             mock_kChar.kSyl = mock_kSyl
             mock_kChar.kLine = mock_kLine
             mock_kChar.kChar = mock_kChar
