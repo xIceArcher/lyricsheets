@@ -526,9 +526,9 @@ class SongDB:
             currCharIdx = 0
             for newSyllable in newLine.syllables:
                 # If the syllable is empty, take the actor of the last syllable
-                if newSyllable.text == '':
+                if newSyllable.text == "":
                     newSyllableToActor.append(charToActor[currCharIdx - 1])
-                else:                
+                else:
                     actors = set(
                         charToActor[currCharIdx : currCharIdx + len(newSyllable.text)]
                     )
@@ -671,7 +671,10 @@ class SongDB:
         ret = []
 
         for row in range(5, len(sheetData)):
-            if "values" in sheetData[row] and "formattedValue" in sheetData[row]["values"][0]:
+            if (
+                "values" in sheetData[row]
+                and "formattedValue" in sheetData[row]["values"][0]
+            ):
                 ret.append(row)
 
         return ret
