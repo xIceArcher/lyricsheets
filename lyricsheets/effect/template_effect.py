@@ -15,46 +15,16 @@ inlinePattern = re.compile(r"(\$[a-zA-Z]+)")
 codePattern = re.compile(r"(![^!]+!)")
 
 
-DEFAULT_STYLE = pyass.Style.parse("BLACK,Avenir Next LT Pro,60,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,4,2,2,246,246,54,1")
+DEFAULT_STYLE = pyass.Style.parse(
+    "BLACK,Avenir Next LT Pro,60,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,4,2,2,246,246,54,1"
+)
+
 
 class TemplateType(Enum):
     LINE = 1
     PRELINE = 2
     SYL = 3
     CHAR = 4
-
-
-@dataclass
-class Range:
-    ranges: Sequence[tuple[int, int]]
-    unbound: bool
-
-    def __init__(self, *ranges: Sequence[tuple[int, int]]):
-        if len(ranges) == 0:
-            self.unbound = True
-            return
-        
-        self.ranges = []
-        for r in ranges:
-            if isinstance(r, tuple) and len(r) == 2:
-                start, end = r
-                if start <= end:
-                    self.ranges.append((start, end))
-                else:
-                    raise ValueError(
-                        "Range start must be less than or equal to range end"
-                    )
-            else:
-                raise ValueError("Each range must be a tuple (start, end)")
-
-    def contains(self, number: int) -> bool:
-        if self.unbound:
-            return True
-        # Check if the number falls within any of the defined ranges
-        for start, end in self.ranges:
-            if start <= number <= end:
-                return True
-        return False
 
 
 @dataclass
@@ -145,7 +115,7 @@ class Template:
     style: pyass.Style
     layer: int
     transitionDuration: timedelta
-    range: Range
+    templateRanges: Sequence[range]
 
     noblank: bool = False
     notext: bool = False
@@ -168,7 +138,13 @@ class Template:
         return split
 
     @staticmethod
-    def compile(text: str, style: pyass.Style = DEFAULT_STYLE, layer: int = 0, transitionDuration: timedelta = timedelta(milliseconds=500), range: Range = Range()) -> Template:
+    def compile(
+        text: str,
+        style: pyass.Style = DEFAULT_STYLE,
+        layer: int = 0,
+        transitionDuration: timedelta = timedelta(milliseconds=500),
+        templateRanges: Sequence[range] = [],
+    ) -> Template:
         templates = text.split(":")
         pretext = templates[0].lower().split(" ")
         template_text = templates[1].strip()
@@ -197,7 +173,7 @@ class Template:
             ],
             templateType=template_type,
             style=style,
-            range=range,
+            templateRanges=templateRanges,
             transitionDuration=transitionDuration,
             noblank="noblank" in pretext,
             notext="notext" in pretext,
@@ -205,13 +181,20 @@ class Template:
             layer=layer,
         )
 
+    def contains(self, lineIdx: int) -> bool:
+        if len(self.templateRanges) == 0:
+            return True
+
+        for templateRange in self.templateRanges:
+            if lineIdx in templateRange:
+                return True
+
+        return False
+
 
 class TemplateEffect(KaraokeEffect):
     romaji_templates: Sequence[Template]
     en_templates: Sequence[Template]
-    
-    romaji_styles: Sequence[tuple[pyass.Style, Range]]
-    en_styles: Sequence[tuple[pyass.Style, Range]]
 
     globals_dict = globals()
 
@@ -223,10 +206,7 @@ class TemplateEffect(KaraokeEffect):
         ast.Div: operator.truediv,
     }
 
-    unary_ops = {
-        ast.UAdd: operator.pos,  # Unary +
-        ast.USub: operator.neg   # Unary -
-    }
+    unary_ops = {ast.UAdd: operator.pos, ast.USub: operator.neg}  # Unary +  # Unary -
 
     @staticmethod
     def _eval_expr(node, kObject: KObject, event: pyass.Event, globals_dict):
@@ -235,7 +215,9 @@ class TemplateEffect(KaraokeEffect):
             right = TemplateEffect._eval_expr(node.right, kObject, event, globals_dict)
             return TemplateEffect.ops[type(node.op)](left, right)
         elif isinstance(node, ast.UnaryOp):  # Unary operations
-            operand = TemplateEffect._eval_expr(node.operand, kObject, event, globals_dict)
+            operand = TemplateEffect._eval_expr(
+                node.operand, kObject, event, globals_dict
+            )
             return TemplateEffect.unary_ops[type(node.op)](operand)
         elif isinstance(node, ast.Constant):  # Numbers
             return node.value
@@ -243,7 +225,8 @@ class TemplateEffect(KaraokeEffect):
             func_name = node.func.id
             if func_name in globals_dict and callable(globals_dict[func_name]):
                 args = [
-                    TemplateEffect._eval_expr(arg, kObject, event, globals_dict) for arg in node.args
+                    TemplateEffect._eval_expr(arg, kObject, event, globals_dict)
+                    for arg in node.args
                 ]
                 return globals_dict[func_name](kObject, event, *args)
             else:
@@ -256,7 +239,9 @@ class TemplateEffect(KaraokeEffect):
                 raise NameError(f"Variable '{var_name}' is not defined")
         elif isinstance(node, ast.Subscript):  # List or dictionary indexing
             value = TemplateEffect._eval_expr(node.value, kObject, event, globals_dict)
-            index = TemplateEffect._eval_expr(node.slice.value, kObject, event, globals_dict)
+            index = TemplateEffect._eval_expr(
+                node.slice.value, kObject, event, globals_dict
+            )
             return value[index]
         elif isinstance(node, ast.Expression):
             return TemplateEffect._eval_expr(node.body, kObject, event, globals_dict)
@@ -264,27 +249,11 @@ class TemplateEffect(KaraokeEffect):
             raise TypeError(f"Unsupported type {type(node)}")
 
     @staticmethod
-    def _evaluate_expression(expression, kObject: KObject, event: pyass.Event, globals_dict):
+    def _evaluate_expression(
+        expression, kObject: KObject, event: pyass.Event, globals_dict
+    ):
         parsed_expr = ast.parse(expression, mode="eval")
         return TemplateEffect._eval_expr(parsed_expr.body, kObject, event, globals_dict)
-
-    def pick_romaji_style(self, line: int) -> pyass.Style:
-        for style, range in self.romaji_styles:
-            if range.contains(line):
-                return style
-
-    def pick_en_style(self, line: int) -> pyass.Style:
-        for style, range in self.en_styles:
-            if range.contains(line):
-                return style
-
-    @staticmethod
-    def _get_function_data(text: str) -> tuple[str, list[str]]:
-        node = ast.parse(text, mode="eval")
-        function_name = node.body.func.id
-        arguments = [ast.literal_eval(arg) for arg in node.body.args]
-
-        return function_name, arguments
 
     def execute_template(self, template: Template, kObject: KObject) -> pyass.Event:
         event = pyass.Event(
@@ -299,20 +268,20 @@ class TemplateEffect(KaraokeEffect):
         for part in template.parts:
             text = part.get_text(kObject)
             if text.startswith("!"):
-                ret = TemplateEffect._evaluate_expression(text[1:-1], kObject, event, self.globals_dict)
+                ret = TemplateEffect._evaluate_expression(
+                    text[1:-1], kObject, event, self.globals_dict
+                )
                 if ret is not None:
                     text = str(ret)
                 else:
                     text = ""
 
             fullText += text
-        
-        
+
         if not template.notext:
             fullText += kObject.text
 
         event.text = fullText
-        
 
         return event
 
@@ -322,8 +291,10 @@ class TemplateEffect(KaraokeEffect):
         events = []
 
         for songLine in songLines:
-            for template in self.en_templates if songLine.isEN else self.romaji_templates:
-                if template.range.contains(songLine.idxInSong):
+            for template in (
+                self.en_templates if songLine.isEN else self.romaji_templates
+            ):
+                if template.contains(songLine.idxInSong):
                     songLine.transitionDuration = template.transitionDuration
                     songLine.style = template.style
                     if template.templateType == TemplateType.LINE:

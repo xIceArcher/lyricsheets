@@ -37,7 +37,7 @@ def get_char_wrap_tags(
         return ([], [])
 
     return STYLE_FONT_NAME_TO_CHAR_WRAP_TAGS[kChar.style.fontName].get(
-        kChar._text, ([], [])
+        kChar.text, ([], [])
     )
 
 
@@ -145,7 +145,7 @@ def get_char_event_parts(
                 *get_char_karaoke_tag(kChar),
                 *charWrapStartTags,
             ],
-            text=kChar._text,
+            text=kChar.text,
         )
     ]
 
@@ -188,8 +188,8 @@ def to_default_romaji_event(
     return pyass.Event(
         format=get_line_format(line),
         style=ROMAJI_STYLE.name,
-        start=line._start - switchDuration,
-        end=line._end + switchDuration,
+        start=line.start - switchDuration,
+        end=line.end + switchDuration,
         parts=[
             # Line style tag
             pyass.EventPart(
@@ -236,8 +236,8 @@ def to_default_en_event(
     return pyass.Event(
         format=get_line_format(line),
         style=EN_STYLE.name,
-        start=line._start - switchDuration,
-        end=line._end + switchDuration,
+        start=line.start - switchDuration,
+        end=line.end + switchDuration,
         parts=[
             pyass.EventPart(
                 tags=[
@@ -277,7 +277,7 @@ def get_switch_syl_fade_offsets(
     for time, _ in actorSwitches:
         # Find the KSyl at which this switch occurs
         for syl in syls:
-            if syl._start == time:
+            if syl.start == time:
                 switchSylFadeOffsets.append(syl.chars[0].fadeOffset)
                 break
 
