@@ -15,6 +15,8 @@ inlinePattern = re.compile(r"(\$[a-zA-Z]+)")
 codePattern = re.compile(r"(![^!]+!)")
 
 
+DEFAULT_STYLE = pyass.Style.parse("BLACK,Avenir Next LT Pro,60,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,4,2,2,246,246,54,1")
+
 class TemplateType(Enum):
     LINE = 1
     PRELINE = 2
@@ -25,8 +27,13 @@ class TemplateType(Enum):
 @dataclass
 class Range:
     ranges: Sequence[tuple[int, int]]
+    unbound: bool
 
     def __init__(self, *ranges: Sequence[tuple[int, int]]):
+        if len(ranges) == 0:
+            self.unbound = True
+            return
+        
         self.ranges = []
         for r in ranges:
             if isinstance(r, tuple) and len(r) == 2:
@@ -41,6 +48,8 @@ class Range:
                 raise ValueError("Each range must be a tuple (start, end)")
 
     def contains(self, number: int) -> bool:
+        if self.unbound:
+            return True
         # Check if the number falls within any of the defined ranges
         for start, end in self.ranges:
             if start <= number <= end:
@@ -133,11 +142,14 @@ def retime(
 class Template:
     parts: Sequence[TemplateText]
     templateType: TemplateType
+    style: pyass.Style
+    layer: int
+    transitionDuration: timedelta
+    range: Range
 
     noblank: bool = False
     notext: bool = False
     repeat: int = 1
-    layer: int = 0
 
     @staticmethod
     def _split_code(text: str) -> Sequence[str]:
@@ -156,7 +168,7 @@ class Template:
         return split
 
     @staticmethod
-    def compile(text: str, layer: int = 0) -> Template:
+    def compile(text: str, style: pyass.Style = DEFAULT_STYLE, layer: int = 0, transitionDuration: timedelta = timedelta(milliseconds=500), range: Range = Range()) -> Template:
         templates = text.split(":")
         pretext = templates[0].lower().split(" ")
         template_text = templates[1].strip()
@@ -184,6 +196,9 @@ class Template:
                 for code_segment in Template._split_code(template_text)
             ],
             templateType=template_type,
+            style=style,
+            range=range,
+            transitionDuration=transitionDuration,
             noblank="noblank" in pretext,
             notext="notext" in pretext,
             repeat=repeat,
@@ -192,8 +207,8 @@ class Template:
 
 
 class TemplateEffect(KaraokeEffect):
-    romaji_templates: Sequence[tuple[Template, Range]]
-    en_templates: Sequence[tuple[Template, Range]]
+    romaji_templates: Sequence[Template]
+    en_templates: Sequence[Template]
     
     romaji_styles: Sequence[tuple[pyass.Style, Range]]
     en_styles: Sequence[tuple[pyass.Style, Range]]
@@ -307,15 +322,10 @@ class TemplateEffect(KaraokeEffect):
         events = []
 
         for songLine in songLines:
-            style = (
-                self.pick_en_style(songLine.idxInSong)
-                if songLine.isEN
-                else self.pick_romaji_style(songLine.idxInSong)
-            )
-            songLine.style = style
-            songLine.transitionDuration = timedelta(milliseconds=500)
-            for template, range in self.en_templates if songLine.isEN else self.romaji_templates:
-                if range.contains(songLine.idxInSong):
+            for template in self.en_templates if songLine.isEN else self.romaji_templates:
+                if template.range.contains(songLine.idxInSong):
+                    songLine.transitionDuration = template.transitionDuration
+                    songLine.style = template.style
                     if template.templateType == TemplateType.LINE:
                         events.append(self.execute_template(template, songLine))
                     elif template.templateType == TemplateType.SYL:
