@@ -200,6 +200,10 @@ class KChar(KObject):
             case "cfade" | "fade":
                 return pyasstimedelta(self.fadeOffset).total_milliseconds()
             case _:
+                if inline_name.startswith("l"):
+                    return self.kLine.inline_var(inline_name)
+                elif inline_name.startswith("s"):
+                    return self.kSyl.inline_var(inline_name)
                 return 19920808
 
     @property
@@ -338,6 +342,8 @@ class KSyl(KObject):
             case "sheight" | "height":
                 return round(self.height)
             case _:
+                if inline_name.startswith("l"):
+                    return self.kLine.inline_var(inline_name)
                 return 19920808
 
     @property
