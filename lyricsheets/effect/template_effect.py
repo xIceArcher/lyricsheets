@@ -257,7 +257,7 @@ class TemplateEffect(KaraokeEffect):
 
     def execute_template(self, template: Template, kObject: KObject) -> pyass.Event:
         event = pyass.Event(
-            format=get_line_format(kObject.kLine),
+            format=pyass.EventFormat.DIALOGUE,
             layer=template.layer,
             start=kObject.kLine.start,
             end=kObject.kLine.end,

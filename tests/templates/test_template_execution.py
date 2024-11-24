@@ -79,15 +79,15 @@ def test_template_execution_layer(layer: int):
         (False, False, pyass.EventFormat.DIALOGUE, kObjectType.KCHAR),
         (False, True, pyass.EventFormat.DIALOGUE, kObjectType.KCHAR),
         (True, False, pyass.EventFormat.DIALOGUE, kObjectType.KCHAR),
-        (True, True, pyass.EventFormat.COMMENT, kObjectType.KCHAR),
+        (True, True, pyass.EventFormat.DIALOGUE, kObjectType.KCHAR),
         (False, False, pyass.EventFormat.DIALOGUE, kObjectType.KSYL),
         (False, True, pyass.EventFormat.DIALOGUE, kObjectType.KSYL),
         (True, False, pyass.EventFormat.DIALOGUE, kObjectType.KSYL),
-        (True, True, pyass.EventFormat.COMMENT, kObjectType.KSYL),
+        (True, True, pyass.EventFormat.DIALOGUE, kObjectType.KSYL),
         (False, False, pyass.EventFormat.DIALOGUE, kObjectType.KLINE),
         (False, True, pyass.EventFormat.DIALOGUE, kObjectType.KLINE),
         (True, False, pyass.EventFormat.DIALOGUE, kObjectType.KLINE),
-        (True, True, pyass.EventFormat.COMMENT, kObjectType.KLINE),
+        (True, True, pyass.EventFormat.DIALOGUE, kObjectType.KLINE),
     ],
 )
 def test_template_execution_format(
